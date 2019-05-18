@@ -231,6 +231,148 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/java8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="愛死一隻知更鳥">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="愛死一隻知更鳥">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/05/18/java8/" itemprop="url">java8</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">發表於</span>
+              
+              <time title="創建於" itemprop="dateCreated datePublished" datetime="2019-05-18T12:31:24+08:00">
+                2019-05-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分類於</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/工具-技巧/" itemprop="url" rel="index">
+                    <span itemprop="name">工具&技巧</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h3 id="List-to-Map"><a href="#List-to-Map" class="headerlink" title="List to Map"></a>List to Map</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div></pre></td><td class="code"><pre><div class="line"><span class="meta">@Data</span></div><div class="line"><span class="meta">@AllArgsConstructor</span></div><div class="line"><span class="meta">@ToString</span></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">People</span> </span>&#123;</div><div class="line">    <span class="keyword">private</span> String name;</div><div class="line">    <span class="keyword">private</span> <span class="keyword">int</span> age;</div><div class="line">    <span class="keyword">private</span> String lastName;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="meta">@Test</span></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testStream</span><span class="params">()</span> </span>&#123;</div><div class="line">    List&lt;People&gt; list = <span class="keyword">new</span> ArrayList&lt;&gt;();</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"nautilis"</span>, <span class="number">25</span>, <span class="string">"zheng"</span>));</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"nautilis"</span>, <span class="number">25</span>, <span class="string">"zheng"</span>));</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"bevan"</span>, <span class="number">25</span>, <span class="string">"zheng"</span>));</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"ning"</span>, <span class="number">24</span>, <span class="string">"li"</span>));</div><div class="line">    <span class="comment">//重复key只保留一个， 并用linkedHashMap保证顺序</span></div><div class="line">    Map&lt;String, People&gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed())</div><div class="line">            .collect(Collectors.toMap(People::getName, Function.identity(),</div><div class="line">                    (oldv, newV) -&gt; newV, LinkedHashMap::<span class="keyword">new</span> ));</div><div class="line">    System.out.printf(<span class="string">"重复key只保留一个， 并用linkedHashMap保证顺序---&gt;"</span>);</div><div class="line">    map.forEach((k, v)  -&gt; System.out.println(k + <span class="string">":"</span> + v));</div><div class="line"></div><div class="line">    <span class="comment">//姓氏#=&gt;人列表</span></div><div class="line">    Map&lt;String,List&lt;People&gt;&gt;  lastPeopleMap = list.stream()</div><div class="line">            .collect(Collectors.groupingBy(People::getLastName));</div><div class="line">    System.out.println(<span class="string">"姓氏#=&gt;人列表 ---&gt;"</span>);</div><div class="line">    lastPeopleMap.forEach((k, v) -&gt; System.out.println(k + <span class="string">" : "</span> + v));</div><div class="line"></div><div class="line">    <span class="comment">//姓氏#=&gt; 人名列表</span></div><div class="line">    Map&lt;String, List&lt;String&gt;&gt; lastnameNamelistMap = list.stream()</div><div class="line">            .collect(Collectors.groupingBy(People::getLastName, Collectors.mapping(People::getName, Collectors.toList())));</div><div class="line">    System.out.println(<span class="string">"姓氏#=&gt; 人名列表---&gt;"</span>);</div><div class="line">    lastnameNamelistMap.forEach((k, v) -&gt; System.out.println(k + <span class="string">" : "</span> + v));</div><div class="line"></div><div class="line">    <span class="comment">// 姓氏#=&gt;人名集合</span></div><div class="line">    Map&lt;String, Set&lt;String&gt;&gt; lastnameNameSet = list.stream()</div><div class="line">            .collect(Collectors.groupingBy(People::getLastName, Collectors.mapping(People::getName, Collectors.toSet())));</div><div class="line">    System.out.println(<span class="string">"姓氏#=&gt;人名集合---&gt;"</span>);</div><div class="line">    lastnameNameSet.forEach((k, v) -&gt; System.out.println(k + <span class="string">" : "</span> + v));</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/maven使用笔记/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1412,7 +1554,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-count">9</span>
                   <span class="site-state-item-name">文章</span>
                 </a>
               </div>
@@ -1434,7 +1576,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-count">6</span>
                   <span class="site-state-item-name">標籤</span>
                 </a>
               </div>

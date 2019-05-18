@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="vim," />
+  <meta name="keywords" content="java," />
 
 
 
@@ -79,25 +79,16 @@
 
 
 
-<meta name="description" content="搜索替换
-sudo 保存只读 :w !sudo tee %
-文本替换:s/foo/bar/g  当前行:%s/foo/bar/g 全文:.,$/foo/bar/g 当前行到末尾:.,+2s/foo/bar/g 当前行及接下来2行:2,10/foo/bar/gic i:大小写不敏感 I:敏感 c:需要确认 C:不需确认 g:所有出现都替换宏
-录制重复宏， e.g. 注释多行。 normal模式下 输">
+<meta name="description" content="List to Map1234567891011121314151617181920212223242526272829303132333435363738394041@Data@AllArgsConstructor@ToStringclass People &amp;#123;    private String name;    private int age;    private String l">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Vim使用笔记">
-<meta property="og:url" content="http://yoursite.com/2019/05/18/Vim使用笔记/index.html">
+<meta property="og:title" content="java8">
+<meta property="og:url" content="http://yoursite.com/2019/05/18/java8/index.html">
 <meta property="og:site_name" content="愛死一隻知更鳥">
-<meta property="og:description" content="搜索替换
-sudo 保存只读 :w !sudo tee %
-文本替换:s/foo/bar/g  当前行:%s/foo/bar/g 全文:.,$/foo/bar/g 当前行到末尾:.,+2s/foo/bar/g 当前行及接下来2行:2,10/foo/bar/gic i:大小写不敏感 I:敏感 c:需要确认 C:不需确认 g:所有出现都替换宏
-录制重复宏， e.g. 注释多行。 normal模式下 输">
-<meta property="og:updated_time" content="2019-05-18T04:28:11.030Z">
+<meta property="og:description" content="List to Map1234567891011121314151617181920212223242526272829303132333435363738394041@Data@AllArgsConstructor@ToStringclass People &amp;#123;    private String name;    private int age;    private String l">
+<meta property="og:updated_time" content="2019-05-18T04:33:25.941Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Vim使用笔记">
-<meta name="twitter:description" content="搜索替换
-sudo 保存只读 :w !sudo tee %
-文本替换:s/foo/bar/g  当前行:%s/foo/bar/g 全文:.,$/foo/bar/g 当前行到末尾:.,+2s/foo/bar/g 当前行及接下来2行:2,10/foo/bar/gic i:大小写不敏感 I:敏感 c:需要确认 C:不需确认 g:所有出现都替换宏
-录制重复宏， e.g. 注释多行。 normal模式下 输">
+<meta name="twitter:title" content="java8">
+<meta name="twitter:description" content="List to Map1234567891011121314151617181920212223242526272829303132333435363738394041@Data@AllArgsConstructor@ToStringclass People &amp;#123;    private String name;    private int age;    private String l">
 
 
 
@@ -127,13 +118,13 @@ sudo 保存只读 :w !sudo tee %
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/05/18/Vim使用笔记/"/>
+  <link rel="canonical" href="http://yoursite.com/2019/05/18/java8/"/>
 
 
 
 
 
-  <title>Vim使用笔记 | 愛死一隻知更鳥</title>
+  <title>java8 | 愛死一隻知更鳥</title>
   
 
 
@@ -240,7 +231,7 @@ sudo 保存只读 :w !sudo tee %
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/Vim使用笔记/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/java8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="愛死一隻知更鳥">
@@ -257,7 +248,7 @@ sudo 保存只读 :w !sudo tee %
 
         
         
-          <h1 class="post-title" itemprop="name headline">Vim使用笔记</h1>
+          <h1 class="post-title" itemprop="name headline">java8</h1>
         
 
         <div class="post-meta">
@@ -269,7 +260,7 @@ sudo 保存只读 :w !sudo tee %
               
                 <span class="post-meta-item-text">發表於</span>
               
-              <time title="創建於" itemprop="dateCreated datePublished" datetime="2019-05-18T12:01:54+08:00">
+              <time title="創建於" itemprop="dateCreated datePublished" datetime="2019-05-18T12:31:24+08:00">
                 2019-05-18
               </time>
             
@@ -329,21 +320,7 @@ sudo 保存只读 :w !sudo tee %
       
 
       
-        <h4 id="搜索替换"><a href="#搜索替换" class="headerlink" title="搜索替换"></a>搜索替换</h4><ul>
-<li>sudo 保存只读 <code>:w !sudo tee %</code></li>
-<li>文本替换<br><code>:s/foo/bar/g</code>  当前行<br><code>:%s/foo/bar/g</code> 全文<br><code>:.,$/foo/bar/g</code> 当前行到末尾<br><code>:.,+2s/foo/bar/g</code> 当前行及接下来2行<br><code>:2,10/foo/bar/gic</code> i:大小写不敏感 I:敏感 c:需要确认 C:不需确认 g:所有出现都替换<h4 id="宏"><a href="#宏" class="headerlink" title="宏"></a>宏</h4></li>
-<li>录制重复宏， e.g. 注释多行。 normal模式下 输入<code>qa</code>, <code>^</code>光标到行头，<code>i</code> 进入insert 模式，输入“#”，<code>esc</code> 进入normal，<code>j</code>光标到下一行，<code>q</code>结束录制，<code>@a</code>注释当前行，<code>10@a</code>注释10行。<h4 id="tabs"><a href="#tabs" class="headerlink" title="tabs"></a>tabs</h4></li>
-<li><code>:tabnew</code> 打开新tab</li>
-<li><code>:tabc</code> 关闭tab</li>
-<li><code>:tabo</code>关闭其他tab</li>
-<li><code>tabs</code> 查看所有tab</li>
-<li><code>tabn 1</code>跳到tab1</li>
-<li><code>tabm 0</code> 标签页到第一位置， 次序从0开始<h4 id="切屏"><a href="#切屏" class="headerlink" title="切屏"></a>切屏</h4></li>
-<li><code>vsplit filename</code>纵切 没有filename默认当前文件</li>
-<li><code>split filename</code> 横切 </li>
-<li><code>ctrl w h|i|k|l</code> 切换屏幕</li>
-<li><code>ctrl w w</code> 后一个窗口 <code>ctrl w p</code> 前一个窗口</li>
-</ul>
+        <h3 id="List-to-Map"><a href="#List-to-Map" class="headerlink" title="List to Map"></a>List to Map</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div></pre></td><td class="code"><pre><div class="line"><span class="meta">@Data</span></div><div class="line"><span class="meta">@AllArgsConstructor</span></div><div class="line"><span class="meta">@ToString</span></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">People</span> </span>&#123;</div><div class="line">    <span class="keyword">private</span> String name;</div><div class="line">    <span class="keyword">private</span> <span class="keyword">int</span> age;</div><div class="line">    <span class="keyword">private</span> String lastName;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="meta">@Test</span></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">testStream</span><span class="params">()</span> </span>&#123;</div><div class="line">    List&lt;People&gt; list = <span class="keyword">new</span> ArrayList&lt;&gt;();</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"nautilis"</span>, <span class="number">25</span>, <span class="string">"zheng"</span>));</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"nautilis"</span>, <span class="number">25</span>, <span class="string">"zheng"</span>));</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"bevan"</span>, <span class="number">25</span>, <span class="string">"zheng"</span>));</div><div class="line">    list.add(<span class="keyword">new</span> People(<span class="string">"ning"</span>, <span class="number">24</span>, <span class="string">"li"</span>));</div><div class="line">    <span class="comment">//重复key只保留一个， 并用linkedHashMap保证顺序</span></div><div class="line">    Map&lt;String, People&gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed())</div><div class="line">            .collect(Collectors.toMap(People::getName, Function.identity(),</div><div class="line">                    (oldv, newV) -&gt; newV, LinkedHashMap::<span class="keyword">new</span> ));</div><div class="line">    System.out.printf(<span class="string">"重复key只保留一个， 并用linkedHashMap保证顺序---&gt;"</span>);</div><div class="line">    map.forEach((k, v)  -&gt; System.out.println(k + <span class="string">":"</span> + v));</div><div class="line"></div><div class="line">    <span class="comment">//姓氏#=&gt;人列表</span></div><div class="line">    Map&lt;String,List&lt;People&gt;&gt;  lastPeopleMap = list.stream()</div><div class="line">            .collect(Collectors.groupingBy(People::getLastName));</div><div class="line">    System.out.println(<span class="string">"姓氏#=&gt;人列表 ---&gt;"</span>);</div><div class="line">    lastPeopleMap.forEach((k, v) -&gt; System.out.println(k + <span class="string">" : "</span> + v));</div><div class="line"></div><div class="line">    <span class="comment">//姓氏#=&gt; 人名列表</span></div><div class="line">    Map&lt;String, List&lt;String&gt;&gt; lastnameNamelistMap = list.stream()</div><div class="line">            .collect(Collectors.groupingBy(People::getLastName, Collectors.mapping(People::getName, Collectors.toList())));</div><div class="line">    System.out.println(<span class="string">"姓氏#=&gt; 人名列表---&gt;"</span>);</div><div class="line">    lastnameNamelistMap.forEach((k, v) -&gt; System.out.println(k + <span class="string">" : "</span> + v));</div><div class="line"></div><div class="line">    <span class="comment">// 姓氏#=&gt;人名集合</span></div><div class="line">    Map&lt;String, Set&lt;String&gt;&gt; lastnameNameSet = list.stream()</div><div class="line">            .collect(Collectors.groupingBy(People::getLastName, Collectors.mapping(People::getName, Collectors.toSet())));</div><div class="line">    System.out.println(<span class="string">"姓氏#=&gt;人名集合---&gt;"</span>);</div><div class="line">    lastnameNameSet.forEach((k, v) -&gt; System.out.println(k + <span class="string">" : "</span> + v));</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 
       
     </div>
@@ -361,7 +338,7 @@ sudo 保存只读 :w !sudo tee %
       
         <div class="post-tags">
           
-            <a href="/tags/vim/" rel="tag"># vim</a>
+            <a href="/tags/java/" rel="tag"># java</a>
           
         </div>
       
@@ -374,8 +351,8 @@ sudo 保存只读 :w !sudo tee %
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/05/18/科学上网/" rel="next" title="科学上网--通过ssh端口转发">
-                <i class="fa fa-chevron-left"></i> 科学上网--通过ssh端口转发
+              <a href="/2019/05/18/maven使用笔记/" rel="next" title="maven使用笔记">
+                <i class="fa fa-chevron-left"></i> maven使用笔记
               </a>
             
           </div>
@@ -383,10 +360,6 @@ sudo 保存只读 :w !sudo tee %
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/05/18/git使用笔记/" rel="prev" title="git使用笔记">
-                git使用笔记 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -538,7 +511,7 @@ sudo 保存只读 :w !sudo tee %
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#搜索替换"><span class="nav-number">1.</span> <span class="nav-text">搜索替换</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#宏"><span class="nav-number">2.</span> <span class="nav-text">宏</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#tabs"><span class="nav-number">3.</span> <span class="nav-text">tabs</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#切屏"><span class="nav-number">4.</span> <span class="nav-text">切屏</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#List-to-Map"><span class="nav-number">1.</span> <span class="nav-text">List to Map</span></a></li></ol></div>
             
 
           </div>
