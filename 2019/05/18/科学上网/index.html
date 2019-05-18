@@ -81,20 +81,20 @@
 
 <meta name="description" content="SSH是什么ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。
 利用SSH 进行科学上网
-如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。-p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host``` 这个命令启动sock">
+如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。 ssh -p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host 这个命令启动so">
 <meta property="og:type" content="article">
-<meta property="og:title" content="科学上网">
+<meta property="og:title" content="科学上网--通过ssh端口转发">
 <meta property="og:url" content="http://yoursite.com/2019/05/18/科学上网/index.html">
 <meta property="og:site_name" content="愛死一隻知更鳥">
 <meta property="og:description" content="SSH是什么ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。
 利用SSH 进行科学上网
-如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。-p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host``` 这个命令启动sock">
-<meta property="og:updated_time" content="2019-05-18T03:50:36.830Z">
+如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。 ssh -p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host 这个命令启动so">
+<meta property="og:updated_time" content="2019-05-18T04:26:36.668Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="科学上网">
+<meta name="twitter:title" content="科学上网--通过ssh端口转发">
 <meta name="twitter:description" content="SSH是什么ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。
 利用SSH 进行科学上网
-如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。-p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host``` 这个命令启动sock">
+如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。 ssh -p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host 这个命令启动so">
 
 
 
@@ -130,7 +130,7 @@
 
 
 
-  <title>科学上网 | 愛死一隻知更鳥</title>
+  <title>科学上网--通过ssh端口转发 | 愛死一隻知更鳥</title>
   
 
 
@@ -254,7 +254,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">科学上网</h1>
+          <h1 class="post-title" itemprop="name headline">科学上网--通过ssh端口转发</h1>
         
 
         <div class="post-meta">
@@ -328,8 +328,11 @@
       
         <h5 id="SSH是什么"><a href="#SSH是什么" class="headerlink" title="SSH是什么"></a>SSH是什么</h5><p>ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。</p>
 <h5 id="利用SSH-进行科学上网"><a href="#利用SSH-进行科学上网" class="headerlink" title="利用SSH 进行科学上网"></a>利用SSH 进行科学上网</h5><ul>
-<li>如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。<figure class="highlight plain"><figcaption><span>-p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host``` 这个命令启动socket监听本地端口8000,将所有发送到的数据通过ssh协议与远程主机进行通信。</span></figcaption><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line">- 开启动态端口转发后，通过[SwitchyOmega](&quot;https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif?hl=zh-CN&amp;utm_source=chrome-ntp-launcher&quot;)等代理插件将浏览器数据转发到本地端口8000即可。</div><div class="line">- 定时重启脚本。不知道是不是超时配置问题，ssh会时不时断线，需要重启，所以就写了个python脚本加到crontab。</div><div class="line"></div><div class="line">```Python</div><div class="line">import subprocess</div><div class="line">import os </div><div class="line">import re</div><div class="line"></div><div class="line">&apos;&apos;&apos;</div><div class="line">通过 ps -ef | grep ssh\ -p\ 22\ -f\ -N | grep -v grep | awk &apos;&#123;print $2&#125;&apos;</div><div class="line">找到启动的进程，执行 kill， 重启ssh转发命令。</div><div class="line">&apos;&apos;&apos;</div><div class="line">try:</div><div class="line">    ps = subprocess.Popen((&apos;ps&apos;, &apos;-ef&apos;), stdout=subprocess.PIPE)</div><div class="line">    grep = subprocess.Popen((&apos;grep&apos;, &apos;ssh\ -p\ 22\ -f\ -N&apos; ), stdin=ps.stdout, stdout=subprocess.PIPE)</div><div class="line">    awk = subprocess.check_output((&apos;awk&apos;, &apos;&#123;print $2&#125;&apos;), stdin=grep.stdout)</div><div class="line">    ps.wait()</div><div class="line">    grep.wait()</div><div class="line">    print(awk)</div><div class="line">except:</div><div class="line">    command = &quot;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&quot;</div><div class="line">    os.system(command)</div><div class="line">    exit()</div><div class="line"></div><div class="line">pids = [p for p in awk.split(&apos;\n&apos;) if re.match(&quot;^\d&quot;, p)]</div><div class="line">for pid in pids:</div><div class="line">    print(&quot;to kill...%s&quot; % (pid))</div><div class="line">    subprocess.check_output([&quot;kill&quot;, pid])</div><div class="line"></div><div class="line">command = &quot;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&quot;</div><div class="line">os.system(command)</div></pre></td></tr></table></figure></li>
+<li>如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。 ssh -p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host 这个命令启动socket监听本地端口8000,将所有发送到的数据通过ssh协议与远程主机进行通信。  </li>
+<li>开启动态端口转发后，通过<a href="&quot;https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif?hl=zh-CN&amp;utm_source=chrome-ntp-launcher&quot;">SwitchyOmega</a>等代理插件将浏览器数据转发到本地端口8000即可。</li>
+<li>定时重启脚本。不知道是不是超时配置问题，ssh会时不时断线，需要重启，所以就写了个python脚本加到crontab。</li>
 </ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> subprocess</div><div class="line"><span class="keyword">import</span> os </div><div class="line"><span class="keyword">import</span> re</div><div class="line"></div><div class="line"><span class="string">'''</span></div><div class="line">通过 ps -ef | grep ssh\ -p\ 22\ -f\ -N | grep -v grep | awk '&#123;print $2&#125;'</div><div class="line">找到启动的进程，执行 kill， 重启ssh转发命令。</div><div class="line">'''</div><div class="line"><span class="keyword">try</span>:</div><div class="line">    ps = subprocess.Popen((<span class="string">'ps'</span>, <span class="string">'-ef'</span>), stdout=subprocess.PIPE)</div><div class="line">    grep = subprocess.Popen((<span class="string">'grep'</span>, <span class="string">'ssh\ -p\ 22\ -f\ -N'</span> ), stdin=ps.stdout, stdout=subprocess.PIPE)</div><div class="line">    awk = subprocess.check_output((<span class="string">'awk'</span>, <span class="string">'&#123;print $2&#125;'</span>), stdin=grep.stdout)</div><div class="line">    ps.wait()</div><div class="line">    grep.wait()</div><div class="line">    print(awk)</div><div class="line"><span class="keyword">except</span>:</div><div class="line">    command = <span class="string">"ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip"</span></div><div class="line">    os.system(command)</div><div class="line">    exit()</div><div class="line"></div><div class="line">pids = [p <span class="keyword">for</span> p <span class="keyword">in</span> awk.split(<span class="string">'\n'</span>) <span class="keyword">if</span> re.match(<span class="string">"^\d"</span>, p)]</div><div class="line"><span class="keyword">for</span> pid <span class="keyword">in</span> pids:</div><div class="line">    print(<span class="string">"to kill...%s"</span> % (pid))</div><div class="line">    subprocess.check_output([<span class="string">"kill"</span>, pid])</div><div class="line"></div><div class="line">command = <span class="string">"ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip"</span></div><div class="line">os.system(command)</div></pre></td></tr></table></figure>
 
       
     </div>
@@ -360,8 +363,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/05/18/2016-10-27-spring-mybatis/" rel="next" title="Intellij整合spring跟mybatis，以及mapper开发方式的小坑">
-                <i class="fa fa-chevron-left"></i> Intellij整合spring跟mybatis，以及mapper开发方式的小坑
+              <a href="/2018/07/09/快速排序/" rel="next" title="快速排序">
+                <i class="fa fa-chevron-left"></i> 快速排序
               </a>
             
           </div>
@@ -369,6 +372,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/05/18/Vim使用笔记/" rel="prev" title="Vim使用笔记">
+                Vim使用笔记 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -449,7 +456,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-count">8</span>
                   <span class="site-state-item-name">文章</span>
                 </a>
               </div>
@@ -471,7 +478,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-count">5</span>
                   <span class="site-state-item-name">標籤</span>
                 </a>
               </div>
