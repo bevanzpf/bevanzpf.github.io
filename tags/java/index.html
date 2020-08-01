@@ -15,21 +15,21 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
 
 
-<title>404 Page not found - nautilis&#39; blog</title>
+<title>Java - nautilis&#39; blog</title>
 
 
 <meta name="author" content="nautilis" />
 
 
 
-<meta property="og:title" content="404 Page not found" />
+<meta property="og:title" content="Java" />
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://nautilis.github.io/404.html" />
-
+<meta property="og:url" content="https://nautilis.github.io/tags/java/" />
+<meta property="og:updated_time" content="2019-05-18T10:06:40+08:00" />
 
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="404 Page not found"/>
+<meta name="twitter:title" content="Java"/>
 <meta name="twitter:description" content=""/>
 
 
@@ -102,9 +102,33 @@
             
             <div class="col-12 col-md-9 float-left content">
                 
-<div class="404-not-found" style="font-size: 2rem; padding-top: 1.5rem;">
-    <span>404 NOT FOUND</span>
+
+<div class="page-info">
+    <span>Posts with the tag Java: </span>
 </div>
+
+
+
+<div class="post">
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/java8/">Java8语法糖</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2019-05-18</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/java">Java</a>&nbsp;</span>
+    </div>
+    <div class="post-item post-summary markdown-body">
+        记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&lt;People&gt; list = new ArrayList&lt;&gt;(); list.add(new People(&#34;nautilis&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;nautilis&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;bevan&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;ning&#34;, 24, &#34;li&#34;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&lt;String, People&gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&gt;
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
 
             </div>
             <aside class="col-12 col-md-3 float-left sidebar">

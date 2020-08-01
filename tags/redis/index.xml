@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>redis on nautilis&#39; blog</title>
+    <link>https://nautilis.github.io/tags/redis/</link>
+    <description>Recent content in redis on nautilis&#39; blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 31 Jul 2020 18:26:20 +0800</lastBuildDate>
+    
+	<atom:link href="https://nautilis.github.io/tags/redis/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>记一次服务端性能优化</title>
+      <link>https://nautilis.github.io/posts/record-server-optimization/</link>
+      <pubDate>Fri, 31 Jul 2020 18:26:20 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/record-server-optimization/</guid>
+      <description>作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。 背景 我主要负责的一个线上服务在夜深人静的某天调</description>
+    </item>
+    
+  </channel>
+</rss>

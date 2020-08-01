@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<meta name="HandheldFriendly" content="True" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+<meta name="generator" content="Hugo 0.74.3" />
+
+
+<link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
+
+
+<title>科学上网之ssh - nautilis&#39; blog</title>
+
+
+<meta name="author" content="nautilis" />
+
+
+
+<meta name="keywords" content="ssh" />
+
+<meta property="og:title" content="科学上网之ssh" />
+<meta property="og:description" content="SSH是什么 ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。 利用SSH 进行科学上网 如果你恰巧有一台海外服务器，可以利" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nautilis.github.io/posts/access-google/" />
+<meta property="article:published_time" content="2019-06-10T18:06:20+08:00" />
+<meta property="article:modified_time" content="2019-06-10T18:06:20+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="科学上网之ssh"/>
+<meta name="twitter:description" content="SSH是什么 ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。 利用SSH 进行科学上网 如果你恰巧有一台海外服务器，可以利"/>
+
+
+
+<style>
+    @media (prefers-color-scheme: dark) {
+        body[data-theme='auto'] img {
+            filter: brightness(60%);
+        }
+    }
+
+    body[data-theme='dark'] img {
+        filter: brightness(60%);
+    }
+</style>
+
+
+<link rel="stylesheet" href="/assets/css/fuji.min.css" />
+
+
+<script async type="module" src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.esm.js"></script>
+<script async nomodule src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.js"></script>
+
+
+
+
+</head>
+
+<body data-theme="auto">
+    <script data-cfasync="false">
+    
+    var fujiThemeData = localStorage.getItem('fuji_data-theme');
+    
+    if (!fujiThemeData) {
+        localStorage.setItem('fuji_data-theme', 'auto');
+    } else {
+        
+        if (fujiThemeData !== 'auto') {
+            document.body.setAttribute('data-theme', fujiThemeData === 'dark' ? 'dark' : 'light');
+        }
+    }
+</script>
+<script data-cfasync="false">
+    
+    function browserDetection(ua) {
+        if (ua.indexOf('MSIE ') > 0 || ua.indexOf('Trident/') > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    var ua = window.navigator.userAgent;
+    if (browserDetection(ua)) {
+        window.location.href('https:\/\/nautilis.github.io\/ie\/');
+    }
+</script>
+    <header>
+    <div class="container-lg clearfix">
+        <div class="col-12 header">
+            <a class="title-main" href="https://nautilis.github.io/">nautilis&#39; blog</a>
+            
+            <span class="title-sub">f s f k</span>
+            
+        </div>
+    </div>
+</header>
+
+    <main>
+        <div class="container-lg clearfix">
+            
+            <div class="col-12 col-md-9 float-left content">
+                
+<article>
+    
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/access-google/">科学上网之ssh</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2019-06-10</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/ssh">ssh</a>&nbsp;</span>
+    </div>
+    
+    
+    <div class="post-content markdown-body">
+        <h5 id="ssh是什么">SSH是什么</h5>
+<p>ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。</p>
+<h5 id="利用ssh-进行科学上网">利用SSH 进行科学上网</h5>
+<ul>
+<li>如果你恰巧有一台海外服务器，可以利用ssh进行动态端口转发从而实现科学上网。 ssh -p your_ssh_port -f -N -D 0.0.0.0:8000 username@remote_host 这个命令启动socket监听本地端口8000,将所有发送到的数据通过ssh协议与远程主机进行通信。</li>
+<li>开启动态端口转发后，通过<a href="%22https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif?hl=zh-CN&amp;utm_source=chrome-ntp-launcher%22">SwitchyOmega</a>等代理插件将浏览器数据转发到本地端口8000即可。</li>
+<li>定时重启脚本。不知道是不是超时配置问题，ssh会时不时断线，需要重启，所以就写了个python脚本加到crontab。</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Python" data-lang="Python"><span style="color:#f92672">import</span> subprocess
+<span style="color:#f92672">import</span> os 
+<span style="color:#f92672">import</span> re
+
+<span style="color:#e6db74">&#39;&#39;&#39;
+</span><span style="color:#e6db74">通过 ps -ef | grep ssh\ -p\ 22\ -f\ -N | grep -v grep | awk &#39;{print $2}&#39;
+</span><span style="color:#e6db74">找到启动的进程，执行 kill， 重启ssh转发命令。
+</span><span style="color:#e6db74">&#39;&#39;&#39;</span>
+<span style="color:#66d9ef">try</span>:
+    ps <span style="color:#f92672">=</span> subprocess<span style="color:#f92672">.</span>Popen((<span style="color:#e6db74">&#39;ps&#39;</span>, <span style="color:#e6db74">&#39;-ef&#39;</span>), stdout<span style="color:#f92672">=</span>subprocess<span style="color:#f92672">.</span>PIPE)
+    grep <span style="color:#f92672">=</span> subprocess<span style="color:#f92672">.</span>Popen((<span style="color:#e6db74">&#39;grep&#39;</span>, <span style="color:#e6db74">&#39;ssh\ -p\ 22\ -f\ -N&#39;</span> ), stdin<span style="color:#f92672">=</span>ps<span style="color:#f92672">.</span>stdout, stdout<span style="color:#f92672">=</span>subprocess<span style="color:#f92672">.</span>PIPE)
+    awk <span style="color:#f92672">=</span> subprocess<span style="color:#f92672">.</span>check_output((<span style="color:#e6db74">&#39;awk&#39;</span>, <span style="color:#e6db74">&#39;{print $2}&#39;</span>), stdin<span style="color:#f92672">=</span>grep<span style="color:#f92672">.</span>stdout)
+    ps<span style="color:#f92672">.</span>wait()
+    grep<span style="color:#f92672">.</span>wait()
+    <span style="color:#66d9ef">print</span>(awk)
+<span style="color:#66d9ef">except</span>:
+    command <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&#34;</span>
+    os<span style="color:#f92672">.</span>system(command)
+    exit()
+
+pids <span style="color:#f92672">=</span> [p <span style="color:#66d9ef">for</span> p <span style="color:#f92672">in</span> awk<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#39;</span>) <span style="color:#66d9ef">if</span> re<span style="color:#f92672">.</span>match(<span style="color:#e6db74">&#34;^\d&#34;</span>, p)]
+<span style="color:#66d9ef">for</span> pid <span style="color:#f92672">in</span> pids:
+    <span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;to kill...</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (pid))
+    subprocess<span style="color:#f92672">.</span>check_output([<span style="color:#e6db74">&#34;kill&#34;</span>, pid])
+
+command <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&#34;</span>
+os<span style="color:#f92672">.</span>system(command)
+</code></pre></div><ul>
+<li>用shell 更少代码</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#75715e">#!/usr/bin
+</span><span style="color:#75715e"></span>
+pids<span style="color:#f92672">=(</span><span style="color:#e6db74">`</span>ps -ef | grep <span style="color:#e6db74">&#39;ssh -p 22 -f -N&#39;</span>  | grep -v <span style="color:#e6db74">&#39;grep&#39;</span> | awk <span style="color:#e6db74">&#39;{print $2}&#39;</span><span style="color:#e6db74">`</span><span style="color:#f92672">)</span>
+echo $pids
+<span style="color:#66d9ef">for</span> p in $pids
+<span style="color:#66d9ef">do</span>
+  kill -9 $p	
+<span style="color:#66d9ef">done</span>
+
+ssh -p <span style="color:#ae81ff">22</span> -f -N -D 0.0.0.0:1090 root@remote_ip
+
+</code></pre></div>
+    </div>
+</article>
+
+
+
+
+            </div>
+            <aside class="col-12 col-md-3 float-left sidebar">
+    
+    <div class="sidebar-item sidebar-pages">
+        <h3>Pages</h3>
+        <ul>
+            
+            <li>
+                <a href="/">主页</a>
+            </li>
+            
+            <li>
+                <a href="/archives/">归档</a>
+            </li>
+            
+            <li>
+                <a href="/index.xml">RSS</a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    <div class="sidebar-item sidebar-tags">
+        <h3>Tags</h3>
+        <div>
+            
+            <span>
+                <a href="/tags/java/">Java</a>
+            </span>
+            
+            <span>
+                <a href="/tags/redis/">redis</a>
+            </span>
+            
+            <span>
+                <a href="/tags/sort/">sort</a>
+            </span>
+            
+            <span>
+                <a href="/tags/ssh/">ssh</a>
+            </span>
+            
+        </div>
+    </div>
+    
+    <div class="sidebar-item sidebar-links">
+        <h3>Links</h3>
+        <ul>
+            
+            <li>
+                <a href="https://github.com/nautilis" target="_blank"><span>GitHub</span></a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    
+    
+    
+</aside>
+        </div>
+        <div class="btn">
+    <div class="btn-toggle-mode">
+        <ion-icon name="contrast"></ion-icon>
+    </div>
+    <div class="btn-scroll-top">
+        <ion-icon name="chevron-up"></ion-icon>
+    </div>
+</div>
+    </main>
+
+    <footer>
+    <div class="container-lg clearfix">
+        <div class="col-12 footer">
+            <span>&copy; 2020 <a href="https://nautilis.github.io/">nautilis</a> |
+                Powered by <a href="https://github.com/amzrk2/hugo-theme-fuji/"
+                   target="_blank">Fuji-v2</a> & <a href="https://gohugo.io/"
+                   target="_blank">Hugo</a> </span>
+        </div>
+    </div>
+</footer>
+    
+    
+<script defer src="https://cdn.jsdelivr.net/combine/npm/medium-zoom@1.0.5,npm/lazysizes@5.2.2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/components/prism-core.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<script defer src="/assets/js/fuji.min.js"></script>
+
+</body>
+
+</html>

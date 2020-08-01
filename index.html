@@ -26,7 +26,7 @@
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://nautilis.github.io/" />
-<meta property="og:updated_time" content="2020-07-25T16:22:40+08:00" />
+<meta property="og:updated_time" content="2020-07-31T18:26:20+08:00" />
 
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="nautilis&#39; blog"/>
@@ -105,6 +105,66 @@
 
 
 
+<div class="post">
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/record-server-optimization/">记一次服务端性能优化</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2020-07-31</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/redis">redis</a>&nbsp;</span>
+    </div>
+    <div class="post-item post-summary markdown-body">
+        作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。 背景 我主要负责的一个线上服务在夜深人静的某天调
+    </div>
+</div>
+
+<div class="post">
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/access-google/">科学上网之ssh</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2019-06-10</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/ssh">ssh</a>&nbsp;</span>
+    </div>
+    <div class="post-item post-summary markdown-body">
+        SSH是什么 ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。 利用SSH 进行科学上网 如果你恰巧有一台海外服务器，可以利
+    </div>
+</div>
+
+<div class="post">
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/java8/">Java8语法糖</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2019-05-18</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/java">Java</a>&nbsp;</span>
+    </div>
+    <div class="post-item post-summary markdown-body">
+        记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&lt;People&gt; list = new ArrayList&lt;&gt;(); list.add(new People(&#34;nautilis&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;nautilis&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;bevan&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;ning&#34;, 24, &#34;li&#34;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&lt;String, People&gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&gt;
+    </div>
+</div>
+
+<div class="post">
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/ssh-note/">ssh 笔记</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2019-03-21</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/ssh">ssh</a>&nbsp;</span>
+    </div>
+    <div class="post-item post-summary markdown-body">
+        端口转发 http://www.dshowing.com/2017/08/14/SSH_portforward/ 本地启动ssh:ssh -p [serverport] -f -N -D 0.0.0.0:[socksport] username@remoteaddress chrome上用proxy switchysharp 或者 firefox 用FoxyProxy 配置一个socks5 IP:127.0.0.1 端口为所填的socksport。 ssh -o PubkeyAuthentication=no 120.24.161.131 不用ssh key ssh -f 后台运行 -N 不发送命令 -f
+    </div>
+</div>
+
+<div class="post">
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/sort-algorithm/">排序算法</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2018-07-07</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/sort">sort</a>&nbsp;</span>
+    </div>
+    <div class="post-item post-summary markdown-body">
+        归并排序 归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素
+    </div>
+</div>
+
 
 
 
@@ -122,11 +182,11 @@
         <ul>
             
             <li>
-                <a href="/">Home</a>
+                <a href="/">主页</a>
             </li>
             
             <li>
-                <a href="/archives/">Archives</a>
+                <a href="/archives/">归档</a>
             </li>
             
             <li>
@@ -139,6 +199,22 @@
     <div class="sidebar-item sidebar-tags">
         <h3>Tags</h3>
         <div>
+            
+            <span>
+                <a href="/tags/java/">Java</a>
+            </span>
+            
+            <span>
+                <a href="/tags/redis/">redis</a>
+            </span>
+            
+            <span>
+                <a href="/tags/sort/">sort</a>
+            </span>
+            
+            <span>
+                <a href="/tags/ssh/">ssh</a>
+            </span>
             
         </div>
     </div>

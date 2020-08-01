@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<meta name="HandheldFriendly" content="True" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+<meta name="generator" content="Hugo 0.74.3" />
+
+
+<link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
+
+
+<title>记一次服务端性能优化 - nautilis&#39; blog</title>
+
+
+<meta name="author" content="nautilis" />
+
+
+
+<meta name="keywords" content="redis" />
+
+<meta property="og:title" content="记一次服务端性能优化" />
+<meta property="og:description" content="作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。 背景 我主要负责的一个线上服务在夜深人静的某天调" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nautilis.github.io/posts/record-server-optimization/" />
+<meta property="article:published_time" content="2020-07-31T18:26:20+08:00" />
+<meta property="article:modified_time" content="2020-07-31T18:26:20+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="记一次服务端性能优化"/>
+<meta name="twitter:description" content="作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。 背景 我主要负责的一个线上服务在夜深人静的某天调"/>
+
+
+
+<style>
+    @media (prefers-color-scheme: dark) {
+        body[data-theme='auto'] img {
+            filter: brightness(60%);
+        }
+    }
+
+    body[data-theme='dark'] img {
+        filter: brightness(60%);
+    }
+</style>
+
+
+<link rel="stylesheet" href="/assets/css/fuji.min.css" />
+
+
+<script async type="module" src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.esm.js"></script>
+<script async nomodule src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.js"></script>
+
+
+
+
+</head>
+
+<body data-theme="auto">
+    <script data-cfasync="false">
+    
+    var fujiThemeData = localStorage.getItem('fuji_data-theme');
+    
+    if (!fujiThemeData) {
+        localStorage.setItem('fuji_data-theme', 'auto');
+    } else {
+        
+        if (fujiThemeData !== 'auto') {
+            document.body.setAttribute('data-theme', fujiThemeData === 'dark' ? 'dark' : 'light');
+        }
+    }
+</script>
+<script data-cfasync="false">
+    
+    function browserDetection(ua) {
+        if (ua.indexOf('MSIE ') > 0 || ua.indexOf('Trident/') > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    var ua = window.navigator.userAgent;
+    if (browserDetection(ua)) {
+        window.location.href('https:\/\/nautilis.github.io\/ie\/');
+    }
+</script>
+    <header>
+    <div class="container-lg clearfix">
+        <div class="col-12 header">
+            <a class="title-main" href="https://nautilis.github.io/">nautilis&#39; blog</a>
+            
+            <span class="title-sub">f s f k</span>
+            
+        </div>
+    </div>
+</header>
+
+    <main>
+        <div class="container-lg clearfix">
+            
+            <div class="col-12 col-md-9 float-left content">
+                
+<article>
+    
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/record-server-optimization/">记一次服务端性能优化</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2020-07-31</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/redis">redis</a>&nbsp;</span>
+    </div>
+    
+    
+    <div class="post-content markdown-body">
+        <p>作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。</p>
+<h2 id="背景">背景</h2>
+<p><img class="img-zoomable" src="/img/mc-monitor.png" alt="image" />
+
+我主要负责的一个线上服务在夜深人静的某天调用方突然告服务超时,从上图可以看到高分期（23点到凌晨2点）响应时间严重的已经超过100ms。这是一个较为底层的服务，主要为用户feed流提供批量用户属性查询跟用户关系查询(获取feed流内容作者属性以及当前用户是否关注这些作者）。两种数据的获取通过内部调用另一个底层服务实现，对于用户属性，服务端先通过mget获取缓存中的数据，缓存不命中的情况下并发查询数据库再汇总返回；用户关系，也是先查询缓存再通过pipeline查询持久换缓存。机器部署了9台，其中1台4核，其他都是2核。</p>
+<h2 id="初步排查">初步排查</h2>
+<ol>
+<li>线上无新增代码，进程也是几天前的，排除新代码问题。</li>
+<li>pv突然增长了经20%, 查看机器负载发现cpu,内存，load都很正常，依赖的Redis跟RDS也没有超水位告警。
+真是见鬼，以往的排查方式居然没有一丝线索&hellip; 于是我觉得自己加上耗时打点，然后通过脚本采集下耗时情况。</li>
+</ol>
+<h2 id="采集">采集</h2>
+<ul>
+<li>接口加入打点统计不同机器上的mget耗时，redis未命中数， db并发查询耗时</li>
+<li>在负载不高的机器分固定uid 跟随机uid两组请求接口获取耗时数据，同时本地直接连接redis调用mget统计耗时。</li>
+</ul>
+<h2 id="数据分析">数据分析</h2>
+<ul>
+<li>计算每分钟各项数据耗时的平均值(这里走了个弯路😰)</li>
+<li>对比不同机器上的mget耗时，看是不是个别机器的问题。</li>
+<li>对比同时需要请求Redis跟DB时，了解mget跟db的耗时偏差。</li>
+<li>对比服务mget跟本地mget耗时，验证Redis耗时情况是否如实。</li>
+</ul>
+<p>以下图标x轴为时间（分钟级）y轴为耗时（单位ms)
+<img class="img-zoomable" src="/img/multiple-machine-mget-avg.png" alt="image" />
+</p>
+<p>上面这张就是不同机器的mget耗时情况，可以看出mget耗时确实存在高峰期效应并且不存在个别机器耗时偏离较大的情况，所以排除个别机器的问题。</p>
+<p><img class="img-zoomable" src="/img/mget-vs-db-avg.png" alt="image" />
+
+在同时需要查Redis跟DB的请求中，DB耗时明显高于Redis,但这是可预见的，高低峰两个曲线的波动从这个图上看不明显，进一步通过抽查服务的打点日志可以看到3万个请求中需要查询DB的只有16个，说明feed流获取的用户基本都是缓存到Redis的热数据，排除DB引发高耗时,进一步观察Redis的数据。</p>
+<p><img class="img-zoomable" src="/img/smget-vs-lmget-avg.png" alt="image" />
+
+上面这张图左边是出问题的服务内部mget，右边是低负载服务器上使用同个Redis集群的mget表现。两者呈现相同的分布趋势，Redis高峰期确实响应变慢。</p>
+<p>通过以上的一轮分析，首先排除了个别机器的问题以及DB的问题，似乎问题就是Redis慢了导致的。但是，不对啊，Redis耗时虽然高峰期变慢但是8ms也并不至于导致100+ms的告警，另外Redis的性能是大家公认的。 后面经过和同事的一番探讨，收获了一个重要的知识&ndash;排查问题的时候一般看最大值，另外也还发现我漏分析了中转的耗时。</p>
+<p><img class="img-zoomable" src="/img/translate-max.png" alt="image" />
+</p>
+<p>上面这张就是后来补的中转耗时趋势图（按每分钟取最大值处理），中转最大耗时也不过2ms，显然也不是中转导致的。</p>
+<p>继续对之前的数据做最大值处理，在服务端mget跟本地mget这组队比中我们发现了异常👇</p>
+<p><img class="img-zoomable" src="/img/smge-vs-lmget-max.png" alt="image" />
+</p>
+<p>在取最大值的情况下，服务的mget耗时高峰期普遍到达80ms以上，而直接连Redis的对照组则十分平稳没有高峰效应。这十分让人不解，我的脚本连接Redis跟服务器的表现完全对不上了，太奇怪了，是时候分析下代码了。</p>
+<h2 id="查看代码">查看代码</h2>
+<p><img class="img-zoomable" src="/img/redis-new-client.png" alt="image" />
+</p>
+<ul>
+<li>我的脚本跟服务器都是通过这样的方式获取Redis客户端，这个客户端到底是怎么生成的呢？option里到底有什么？</li>
+</ul>
+<p><img class="img-zoomable" src="/img/option.png" alt="image" />
+</p>
+<ul>
+<li>通过对代码的进一步查看，发现这个Redis客户端是维护了一组Redis链接池的，并且通过这个poolSize的参数设置链接池的大小，默认大小是10*CPU数。这下我们有了线索，初步怀疑连接不够用，继续看代码，发现连接池无空闲连接的时候默认的等待超时居然达1秒钟，这更加决定了我的怀疑，后续我加了个空闲连接数的带点也确实验证了高峰期连接数耗尽的情况。</li>
+</ul>
+<h2 id="解决">解决</h2>
+<ul>
+<li>修改默认连接池数目，因为通过代码发现这个连接数是有自动回收机制的，连接空闲超过一定时间就会被回收。</li>
+</ul>
+<h2 id="总结">总结</h2>
+<ul>
+<li>采用耗时打点的方式可以很快定位问题的位置。</li>
+<li>设置合理的对照组有利于体现数据异常从中找到线索。</li>
+<li>分析性能问题时要看最大值，平均值会掩盖掉真实情况。</li>
+<li>最后要耐心地分析代码尝试到数据背后的真相。</li>
+</ul>
+
+    </div>
+</article>
+
+
+
+
+            </div>
+            <aside class="col-12 col-md-3 float-left sidebar">
+    
+    <div class="sidebar-item sidebar-pages">
+        <h3>Pages</h3>
+        <ul>
+            
+            <li>
+                <a href="/">主页</a>
+            </li>
+            
+            <li>
+                <a href="/archives/">归档</a>
+            </li>
+            
+            <li>
+                <a href="/index.xml">RSS</a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    <div class="sidebar-item sidebar-tags">
+        <h3>Tags</h3>
+        <div>
+            
+            <span>
+                <a href="/tags/java/">Java</a>
+            </span>
+            
+            <span>
+                <a href="/tags/redis/">redis</a>
+            </span>
+            
+            <span>
+                <a href="/tags/sort/">sort</a>
+            </span>
+            
+            <span>
+                <a href="/tags/ssh/">ssh</a>
+            </span>
+            
+        </div>
+    </div>
+    
+    <div class="sidebar-item sidebar-links">
+        <h3>Links</h3>
+        <ul>
+            
+            <li>
+                <a href="https://github.com/nautilis" target="_blank"><span>GitHub</span></a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    
+    
+    
+</aside>
+        </div>
+        <div class="btn">
+    <div class="btn-toggle-mode">
+        <ion-icon name="contrast"></ion-icon>
+    </div>
+    <div class="btn-scroll-top">
+        <ion-icon name="chevron-up"></ion-icon>
+    </div>
+</div>
+    </main>
+
+    <footer>
+    <div class="container-lg clearfix">
+        <div class="col-12 footer">
+            <span>&copy; 2020 <a href="https://nautilis.github.io/">nautilis</a> |
+                Powered by <a href="https://github.com/amzrk2/hugo-theme-fuji/"
+                   target="_blank">Fuji-v2</a> & <a href="https://gohugo.io/"
+                   target="_blank">Hugo</a> </span>
+        </div>
+    </div>
+</footer>
+    
+    
+<script defer src="https://cdn.jsdelivr.net/combine/npm/medium-zoom@1.0.5,npm/lazysizes@5.2.2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/components/prism-core.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<script defer src="/assets/js/fuji.min.js"></script>
+
+</body>
+
+</html>

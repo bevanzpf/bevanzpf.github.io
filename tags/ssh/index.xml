@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ssh on nautilis&#39; blog</title>
+    <link>https://nautilis.github.io/tags/ssh/</link>
+    <description>Recent content in ssh on nautilis&#39; blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 10 Jun 2019 18:06:20 +0800</lastBuildDate>
+    
+	<atom:link href="https://nautilis.github.io/tags/ssh/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>科学上网之ssh</title>
+      <link>https://nautilis.github.io/posts/access-google/</link>
+      <pubDate>Mon, 10 Jun 2019 18:06:20 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/access-google/</guid>
+      <description>SSH是什么 ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。 利用SSH 进行科学上网 如果你恰巧有一台海外服务器，可以利</description>
+    </item>
+    
+    <item>
+      <title>ssh 笔记</title>
+      <link>https://nautilis.github.io/posts/ssh-note/</link>
+      <pubDate>Thu, 21 Mar 2019 17:55:45 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/ssh-note/</guid>
+      <description>端口转发 http://www.dshowing.com/2017/08/14/SSH_portforward/ 本地启动ssh:ssh -p [serverport] -f -N -D 0.0.0.0:[socksport] username@remoteaddress chrome上用proxy switchysharp 或者 firefox 用FoxyProxy 配置一个socks5 IP:127.0.0.1 端口为所填的socksport。 ssh -o PubkeyAuthentication=no 120.24.161.131 不用ssh key ssh -f 后台运行 -N 不发送命令 -f</description>
+    </item>
+    
+  </channel>
+</rss>

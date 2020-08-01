@@ -6,18 +6,54 @@
     <description>Recent content in Posts on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 25 Jul 2020 16:22:40 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 31 Jul 2020 18:26:20 +0800</lastBuildDate>
     
 	<atom:link href="https://nautilis.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>多周期榜单实现</title>
-      <link>https://nautilis.github.io/posts/multiple-rank-implement/</link>
-      <pubDate>Sat, 25 Jul 2020 16:22:40 +0800</pubDate>
+      <title>记一次服务端性能优化</title>
+      <link>https://nautilis.github.io/posts/record-server-optimization/</link>
+      <pubDate>Fri, 31 Jul 2020 18:26:20 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/multiple-rank-implement/</guid>
-      <description></description>
+      <guid>https://nautilis.github.io/posts/record-server-optimization/</guid>
+      <description>作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。 背景 我主要负责的一个线上服务在夜深人静的某天调</description>
+    </item>
+    
+    <item>
+      <title>科学上网之ssh</title>
+      <link>https://nautilis.github.io/posts/access-google/</link>
+      <pubDate>Mon, 10 Jun 2019 18:06:20 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/access-google/</guid>
+      <description>SSH是什么 ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。 利用SSH 进行科学上网 如果你恰巧有一台海外服务器，可以利</description>
+    </item>
+    
+    <item>
+      <title>Java8语法糖</title>
+      <link>https://nautilis.github.io/posts/java8/</link>
+      <pubDate>Sat, 18 May 2019 10:06:40 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/java8/</guid>
+      <description>记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&amp;lt;People&amp;gt; list = new ArrayList&amp;lt;&amp;gt;(); list.add(new People(&amp;#34;nautilis&amp;#34;, 25, &amp;#34;zheng&amp;#34;)); list.add(new People(&amp;#34;nautilis&amp;#34;, 25, &amp;#34;zheng&amp;#34;)); list.add(new People(&amp;#34;bevan&amp;#34;, 25, &amp;#34;zheng&amp;#34;)); list.add(new People(&amp;#34;ning&amp;#34;, 24, &amp;#34;li&amp;#34;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&amp;lt;String, People&amp;gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&amp;gt;</description>
+    </item>
+    
+    <item>
+      <title>ssh 笔记</title>
+      <link>https://nautilis.github.io/posts/ssh-note/</link>
+      <pubDate>Thu, 21 Mar 2019 17:55:45 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/ssh-note/</guid>
+      <description>端口转发 http://www.dshowing.com/2017/08/14/SSH_portforward/ 本地启动ssh:ssh -p [serverport] -f -N -D 0.0.0.0:[socksport] username@remoteaddress chrome上用proxy switchysharp 或者 firefox 用FoxyProxy 配置一个socks5 IP:127.0.0.1 端口为所填的socksport。 ssh -o PubkeyAuthentication=no 120.24.161.131 不用ssh key ssh -f 后台运行 -N 不发送命令 -f</description>
+    </item>
+    
+    <item>
+      <title>排序算法</title>
+      <link>https://nautilis.github.io/posts/sort-algorithm/</link>
+      <pubDate>Sat, 07 Jul 2018 18:00:34 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/sort-algorithm/</guid>
+      <description>归并排序 归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素</description>
     </item>
     
   </channel>
