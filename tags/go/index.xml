@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Go on nautilis&#39; blog</title>
+    <link>https://nautilis.github.io/tags/go/</link>
+    <description>Recent content in Go on nautilis&#39; blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 15 Aug 2020 11:25:06 +0800</lastBuildDate>
+    
+	<atom:link href="https://nautilis.github.io/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>徒手撸一个分布式id生成器</title>
+      <link>https://nautilis.github.io/posts/gen-unique-by-redis/</link>
+      <pubDate>Sat, 15 Aug 2020 11:25:06 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/gen-unique-by-redis/</guid>
+      <description>在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业</description>
+    </item>
+    
+  </channel>
+</rss>
