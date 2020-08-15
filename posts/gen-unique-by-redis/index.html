@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<meta name="HandheldFriendly" content="True" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+<meta name="generator" content="Hugo 0.74.3" />
+
+
+<link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
+
+
+<title>徒手撸一个分布式id生成器 - nautilis&#39; blog</title>
+
+
+<meta name="author" content="nautilis" />
+
+
+
+<meta property="og:title" content="徒手撸一个分布式id生成器" />
+<meta property="og:description" content="在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nautilis.github.io/posts/gen-unique-by-redis/" />
+<meta property="article:published_time" content="2020-08-15T11:25:06+08:00" />
+<meta property="article:modified_time" content="2020-08-15T11:25:06+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="徒手撸一个分布式id生成器"/>
+<meta name="twitter:description" content="在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业"/>
+
+
+
+<style>
+    @media (prefers-color-scheme: dark) {
+        body[data-theme='auto'] img {
+            filter: brightness(60%);
+        }
+    }
+
+    body[data-theme='dark'] img {
+        filter: brightness(60%);
+    }
+</style>
+
+
+<link rel="stylesheet" href="/assets/css/fuji.min.css" />
+
+
+<script async type="module" src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.esm.js"></script>
+<script async nomodule src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.js"></script>
+
+
+
+
+</head>
+
+<body data-theme="auto">
+    <script data-cfasync="false">
+    
+    var fujiThemeData = localStorage.getItem('fuji_data-theme');
+    
+    if (!fujiThemeData) {
+        localStorage.setItem('fuji_data-theme', 'auto');
+    } else {
+        
+        if (fujiThemeData !== 'auto') {
+            document.body.setAttribute('data-theme', fujiThemeData === 'dark' ? 'dark' : 'light');
+        }
+    }
+</script>
+<script data-cfasync="false">
+    
+    function browserDetection(ua) {
+        if (ua.indexOf('MSIE ') > 0 || ua.indexOf('Trident/') > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    var ua = window.navigator.userAgent;
+    if (browserDetection(ua)) {
+        window.location.href('https:\/\/nautilis.github.io\/ie\/');
+    }
+</script>
+    <header>
+    <div class="container-lg clearfix">
+        <div class="col-12 header">
+            <a class="title-main" href="https://nautilis.github.io/">nautilis&#39; blog</a>
+            
+            <span class="title-sub">f s f k</span>
+            
+        </div>
+    </div>
+</header>
+
+    <main>
+        <div class="container-lg clearfix">
+            
+            <div class="col-12 col-md-9 float-left content">
+                
+<article>
+    
+    <h2 class="post-item post-title">
+        <a href="https://nautilis.github.io/posts/gen-unique-by-redis/">徒手撸一个分布式id生成器</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2020-08-15</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;No tag</span>
+    </div>
+    
+    
+    <div class="post-content markdown-body">
+        <p>在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业内有许多成熟的方案，最出名的有Twitter的snowflake算法，国内很多大厂也有自己的实现方案例如美团的Left,百度的uid-generator。今天我们通过Redis来实现一个分布式ID生成器，要求比较简单，除了id要唯一,支持分布式，还要保证定长跟无序。</p>
+<h2 id="实现方法">实现方法</h2>
+<ul>
+<li>多台机器ID保持唯一：id通过数字映射到35个数字字母组成(1-9,q-z, 0作为补位), 整个id分为两段，前段4位字符由当前时间跟服务的起始时间做差以及机器编号决定，后段5位字符则通过随机生成数字再通过Redis的bitmap排重。排重的key使用id的前段标识，redis bitmap可以最多可以标记2^32-1，后段位数为5共35^5=52521875个随机数,假如并发高到10000tps一个小时内也不会超过52521875了。</li>
+<li>单个进程中ID的存取：通过channel存储生成的id, 当channel满时休眠，channel被消费有剩余空间时补充id。</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;bytes&#34;</span>
+	<span style="color:#e6db74">&#34;log&#34;</span>
+	<span style="color:#e6db74">&#34;math/rand&#34;</span>
+    <span style="color:#e6db74">&#34;github.com/go-redis/redis/v8&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+	<span style="color:#e6db74">&#34;strconv&#34;</span>
+	<span style="color:#e6db74">&#34;sync&#34;</span>
+	<span style="color:#e6db74">&#34;time&#34;</span>
+)
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">redisClient</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">Client</span>
+
+<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">IdGenerate</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">base35code</span>  []<span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">startTime</span>   <span style="color:#66d9ef">int64</span>
+	<span style="color:#a6e22e">machineCode</span> <span style="color:#66d9ef">int</span> <span style="color:#75715e">//服务器编码(通过hostname后缀获取）
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">redisClient</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">Client</span>
+	<span style="color:#a6e22e">random</span>      <span style="color:#f92672">*</span><span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">Rand</span>
+	<span style="color:#a6e22e">idChannel</span>   <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">string</span> <span style="color:#75715e">//存储生成id的管道
+</span><span style="color:#75715e"></span>}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewIdGenerate</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span> {
+	<span style="color:#a6e22e">inst</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">IdGenerate</span>{
+		<span style="color:#a6e22e">startTime</span>: <span style="color:#ae81ff">1596782020</span>,
+		<span style="color:#a6e22e">random</span>:    <span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">NewSource</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Unix</span>())),
+		<span style="color:#a6e22e">idChannel</span>: make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">string</span>, <span style="color:#ae81ff">10000</span>),
+	}
+	<span style="color:#a6e22e">hostName</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Hostname</span>()
+	<span style="color:#a6e22e">machineId</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Atoi</span>(<span style="color:#a6e22e">hostName</span>[len(<span style="color:#a6e22e">hostName</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>:])
+	<span style="color:#a6e22e">inst</span>.<span style="color:#a6e22e">machineCode</span> = <span style="color:#a6e22e">machineId</span>
+	<span style="color:#a6e22e">base35Code</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;123456789qwertyuioplkjhgfdsazxcvbnm&#34;</span>
+	<span style="color:#a6e22e">inst</span>.<span style="color:#a6e22e">base35code</span> = []byte(<span style="color:#a6e22e">base35Code</span>)
+	<span style="color:#a6e22e">redisClient</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">Options</span>{
+		<span style="color:#a6e22e">Addr</span>: <span style="color:#e6db74">&#34;127.0.0.1:6379&#34;</span>,
+	})
+	<span style="color:#a6e22e">inst</span>.<span style="color:#a6e22e">redisClient</span> = <span style="color:#a6e22e">redisClient</span>
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">inst</span>
+}
+
+<span style="color:#75715e">//将数字映射成字母数字组合字符串
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">getBase35Code</span>(<span style="color:#a6e22e">num</span> <span style="color:#66d9ef">int64</span>) <span style="color:#66d9ef">string</span> {
+	<span style="color:#a6e22e">codeLen</span> <span style="color:#f92672">:=</span> int64(len(<span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">base35code</span>))
+	<span style="color:#a6e22e">buf</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">base35code</span>[<span style="color:#a6e22e">num</span><span style="color:#f92672">%</span><span style="color:#a6e22e">codeLen</span>]
+		<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">WriteByte</span>(<span style="color:#a6e22e">c</span>)
+		<span style="color:#a6e22e">num</span> = <span style="color:#a6e22e">num</span> <span style="color:#f92672">/</span> <span style="color:#a6e22e">codeLen</span>
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">num</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span> {
+			<span style="color:#66d9ef">break</span>
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">String</span>()
+}
+
+<span style="color:#75715e">//当前时间与服务起始时间做差来确定一个排重key
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">getDistinctKey</span>() <span style="color:#66d9ef">string</span> {
+	<span style="color:#a6e22e">key</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">getBase35Code</span>((<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Unix</span>()<span style="color:#f92672">-</span><span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">startTime</span>)<span style="color:#f92672">/</span><span style="color:#ae81ff">3500</span> <span style="color:#f92672">+</span> int64(<span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">machineCode</span>))
+	<span style="color:#a6e22e">pack</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
+	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">key</span>) &lt; <span style="color:#ae81ff">4</span> { <span style="color:#75715e">//不足四位通过0补齐
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> len(<span style="color:#a6e22e">key</span>); <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">4</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+			<span style="color:#a6e22e">pack</span>.<span style="color:#a6e22e">WriteByte</span>(<span style="color:#e6db74">&#39;0&#39;</span>)
+		}
+	}
+	<span style="color:#a6e22e">pack</span>.<span style="color:#a6e22e">WriteString</span>(<span style="color:#a6e22e">key</span>)
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">pack</span>.<span style="color:#a6e22e">String</span>()
+}
+
+<span style="color:#75715e">//通过bitmap过滤不断的尝试生成新id
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">genId</span>() <span style="color:#66d9ef">string</span> {
+	<span style="color:#a6e22e">distinctKey</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">getDistinctKey</span>()
+	<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">BitCount</span>(<span style="color:#a6e22e">distinctKey</span>, <span style="color:#66d9ef">nil</span>).<span style="color:#a6e22e">Result</span>()
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+	}
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> <span style="color:#a6e22e">c</span><span style="color:#f92672">%</span><span style="color:#ae81ff">100</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> { <span style="color:#75715e">//设置新key 2小时后过期，这里怕一次设置可能失败故没在bitmap 每标记100个就重新设置一次过期
+</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">Expire</span>(<span style="color:#a6e22e">distinctKey</span>, <span style="color:#ae81ff">2</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>)
+	}
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">id</span> <span style="color:#66d9ef">int</span>
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#a6e22e">id</span> = <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">random</span>.<span style="color:#a6e22e">Intn</span>(<span style="color:#ae81ff">35</span>) <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">4</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+			<span style="color:#a6e22e">r</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">random</span>.<span style="color:#a6e22e">Intn</span>(<span style="color:#ae81ff">35</span>) <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+			<span style="color:#a6e22e">id</span> = <span style="color:#a6e22e">id</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">r</span>
+		}
+		<span style="color:#a6e22e">val</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">GetBit</span>(<span style="color:#a6e22e">distinctKey</span>, int64(<span style="color:#a6e22e">id</span>)).<span style="color:#a6e22e">Result</span>()
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;access redis error: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+		}
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">val</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+			<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">SetBit</span>(<span style="color:#a6e22e">distinctKey</span>, int64(<span style="color:#a6e22e">id</span>), <span style="color:#ae81ff">1</span>).<span style="color:#a6e22e">Result</span>()
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+				<span style="color:#66d9ef">continue</span>
+			}
+			<span style="color:#66d9ef">break</span>
+		}
+	}
+	<span style="color:#a6e22e">randomPart</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">getBase35Code</span>(int64(<span style="color:#a6e22e">id</span>))
+	<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
+	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">WriteString</span>(<span style="color:#a6e22e">distinctKey</span>)
+	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">WriteString</span>(<span style="color:#a6e22e">randomPart</span>)
+	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">randomPart</span>) &lt; <span style="color:#ae81ff">5</span> {
+		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> len(<span style="color:#a6e22e">randomPart</span>); <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">5</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+			<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">WriteByte</span>(<span style="color:#e6db74">&#39;0&#39;</span>)
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">String</span>()
+}
+
+<span style="color:#75715e">//循环不断生成id的方法
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">provideId</span>() {
+	<span style="color:#a6e22e">useOld</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span>
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">id</span> <span style="color:#66d9ef">string</span>
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">useOld</span> {
+			<span style="color:#a6e22e">id</span> = <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">genId</span>()
+		}
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">idChannel</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">id</span>:
+			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;add id:&#34;</span>, <span style="color:#a6e22e">id</span>)
+			<span style="color:#a6e22e">useOld</span> = <span style="color:#66d9ef">false</span>
+		<span style="color:#66d9ef">default</span>:
+			<span style="color:#a6e22e">useOld</span> = <span style="color:#66d9ef">true</span>
+			<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+		}
+	}
+}
+
+<span style="color:#75715e">//获取id
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">ConsumeId</span>(<span style="color:#a6e22e">size</span> <span style="color:#66d9ef">int</span>) (<span style="color:#a6e22e">res</span> []<span style="color:#66d9ef">string</span>) {
+	<span style="color:#75715e">//总的超时时间设置为100ms
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">eachTimeOut</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>(<span style="color:#ae81ff">100</span><span style="color:#f92672">/</span><span style="color:#a6e22e">size</span>) <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Millisecond</span>
+	<span style="color:#a6e22e">res</span> = make([]<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">size</span>)
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">size</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">id</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">idChannel</span>:
+			<span style="color:#a6e22e">res</span> = append(<span style="color:#a6e22e">res</span>, <span style="color:#a6e22e">id</span>)
+		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">After</span>(<span style="color:#a6e22e">eachTimeOut</span>):
+			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;access id time&#34;</span>)
+		}
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">res</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">generator</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewIdGenerate</span>()
+	<span style="color:#a6e22e">wg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">WaitGroup</span>{}
+	<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">2</span>)
+	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+		<span style="color:#a6e22e">generator</span>.<span style="color:#a6e22e">provideId</span>()
+		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Done</span>()
+	}()
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">10</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+			<span style="color:#66d9ef">for</span> {
+				<span style="color:#a6e22e">ids</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">generator</span>.<span style="color:#a6e22e">ConsumeId</span>(<span style="color:#ae81ff">3</span>)
+				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;consume ids:&#34;</span>, <span style="color:#a6e22e">ids</span>)
+				<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#ae81ff">1</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+			}
+		}()
+	}
+
+	<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Wait</span>()
+}
+</code></pre></div>
+    </div>
+</article>
+
+
+
+
+            </div>
+            <aside class="col-12 col-md-3 float-left sidebar">
+    
+    <div class="sidebar-item sidebar-pages">
+        <h3>Pages</h3>
+        <ul>
+            
+            <li>
+                <a href="/">主页</a>
+            </li>
+            
+            <li>
+                <a href="/archives/">归档</a>
+            </li>
+            
+            <li>
+                <a href="/index.xml">RSS</a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    <div class="sidebar-item sidebar-tags">
+        <h3>Tags</h3>
+        <div>
+            
+            <span>
+                <a href="/tags/java/">Java</a>
+            </span>
+            
+            <span>
+                <a href="/tags/redis/">redis</a>
+            </span>
+            
+            <span>
+                <a href="/tags/sort/">sort</a>
+            </span>
+            
+            <span>
+                <a href="/tags/ssh/">ssh</a>
+            </span>
+            
+        </div>
+    </div>
+    
+    <div class="sidebar-item sidebar-links">
+        <h3>Links</h3>
+        <ul>
+            
+            <li>
+                <a href="https://github.com/nautilis" target="_blank"><span>GitHub</span></a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    
+    
+    
+</aside>
+        </div>
+        <div class="btn">
+    <div class="btn-toggle-mode">
+        <ion-icon name="contrast"></ion-icon>
+    </div>
+    <div class="btn-scroll-top">
+        <ion-icon name="chevron-up"></ion-icon>
+    </div>
+</div>
+    </main>
+
+    <footer>
+    <div class="container-lg clearfix">
+        <div class="col-12 footer">
+            <span>&copy; 2020 <a href="https://nautilis.github.io/">nautilis</a> |
+                Powered by <a href="https://github.com/amzrk2/hugo-theme-fuji/"
+                   target="_blank">Fuji-v2</a> & <a href="https://gohugo.io/"
+                   target="_blank">Hugo</a> </span>
+        </div>
+    </div>
+</footer>
+    
+    
+<script defer src="https://cdn.jsdelivr.net/combine/npm/medium-zoom@1.0.5,npm/lazysizes@5.2.2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/components/prism-core.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<script defer src="/assets/js/fuji.min.js"></script>
+
+</body>
+
+</html>
