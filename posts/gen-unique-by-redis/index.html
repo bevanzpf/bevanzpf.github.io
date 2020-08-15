@@ -22,6 +22,8 @@
 
 
 
+<meta name="keywords" content="redis" />
+
 <meta property="og:title" content="徒手撸一个分布式id生成器" />
 <meta property="og:description" content="在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业" />
 <meta property="og:type" content="article" />
@@ -109,7 +111,7 @@
         <a href="https://nautilis.github.io/posts/gen-unique-by-redis/">徒手撸一个分布式id生成器</a>
     </h2>
     <div class="post-item post-meta">
-        <span><ion-icon name="today"></ion-icon>&nbsp;2020-08-15</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;No tag</span>
+        <span><ion-icon name="today"></ion-icon>&nbsp;2020-08-15</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/redis">redis</a>&nbsp;</span>
     </div>
     
     
@@ -117,7 +119,7 @@
         <p>在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业内有许多成熟的方案，最出名的有Twitter的snowflake算法，国内很多大厂也有自己的实现方案例如美团的Left,百度的uid-generator。今天我们通过Redis来实现一个分布式ID生成器，要求比较简单，除了id要唯一,支持分布式，还要保证定长跟无序。</p>
 <h2 id="实现方法">实现方法</h2>
 <ul>
-<li>多台机器ID保持唯一：id通过数字映射到35个数字字母组成(1-9,q-z, 0作为补位), 整个id分为两段，前段4位字符由当前时间跟服务的起始时间做差以及机器编号决定，后段5位字符则通过随机生成数字再通过Redis的bitmap排重。排重的key使用id的前段标识，redis bitmap可以最多可以标记2^32-1，后段位数为5共35^5=52521875个随机数,假如并发高到10000tps一个小时内也不会超过52521875了。</li>
+<li>多台机器ID保持唯一：id通过数字映射到35个数字字母组成(1-9,a-z, 0作为补位), 整个id分为两段，前段4位字符由当前时间跟服务的起始时间做差以及机器编号决定，后段5位字符则通过随机生成数字再通过Redis的bitmap排重。排重的key使用id的前段标识，redis bitmap可以最多可以标记2^32-1，后段位数为5共35^5=52521875个随机数,假如并发高到10000tps一个小时内也不会超过52521875了。</li>
 <li>单个进程中ID的存取：通过channel存储生成的id, 当channel满时休眠，channel被消费有剩余空间时补充id。</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
