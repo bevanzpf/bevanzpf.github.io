@@ -126,9 +126,10 @@
 
 import (
 	&quot;bytes&quot;
+	&quot;context&quot;
+	&quot;github.com/go-redis/redis&quot;
 	&quot;log&quot;
 	&quot;math/rand&quot;
-    &quot;github.com/go-redis/redis/v8&quot;
 	&quot;os&quot;
 	&quot;strconv&quot;
 	&quot;sync&quot;
@@ -181,7 +182,7 @@ func (this *IdGenerate) getBase35Code(num int64) string {
 
 //当前时间与服务起始时间做差来确定一个排重key
 func (this *IdGenerate) getDistinctKey() string {
-	key := this.getBase35Code((time.Now().Unix()-this.startTime)/3500 + int64(this.machineCode))
+	key := this.getBase35Code((time.Now().Unix()-this.startTime)/3600*100 + int64(this.machineCode)) //*100 预留两位给机器id
 	pack := bytes.Buffer{}
 	if len(key) &lt; 4 { //不足四位通过0补齐
 		for i := len(key); i &lt; 4; i++ {
@@ -195,12 +196,12 @@ func (this *IdGenerate) getDistinctKey() string {
 //通过bitmap过滤不断的尝试生成新id
 func (this *IdGenerate) genId() string {
 	distinctKey := this.getDistinctKey()
-	c, err := this.redisClient.BitCount(distinctKey, nil).Result()
+	c, err := this.redisClient.BitCount(context.Background(), distinctKey, nil).Result()
 	if err != nil {
 		log.Print(err.Error())
 	}
 	if c == 0 || c%100 == 0 { //设置新key 2小时后过期，这里怕一次设置可能失败故没在bitmap 每标记100个就重新设置一次过期
-		this.redisClient.Expire(distinctKey, 2*time.Hour)
+		this.redisClient.Expire(context.Background(), distinctKey, 2*time.Hour)
 	}
 	var id int
 	for {
@@ -209,12 +210,12 @@ func (this *IdGenerate) genId() string {
 			r := this.random.Intn(35) + 1
 			id = id * r
 		}
-		val, err := this.redisClient.GetBit(distinctKey, int64(id)).Result()
+		val, err := this.redisClient.GetBit(context.Background(), distinctKey, int64(id)).Result()
 		if err != nil {
 			log.Print(&quot;access redis error: &quot; + err.Error())
 		}
 		if val == 0 {
-			_, err := this.redisClient.SetBit(distinctKey, int64(id), 1).Result()
+			_, err := this.redisClient.SetBit(context.Background(), distinctKey, int64(id), 1).Result()
 			if err != nil {
 				log.Println(err.Error())
 				continue
@@ -289,6 +290,7 @@ func main() {
 
 	wg.Wait()
 }
+
 </code></pre>
 
     </div>
