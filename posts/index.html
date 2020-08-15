@@ -149,7 +149,7 @@
         <span><ion-icon name="today"></ion-icon>&nbsp;2019-05-18</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/java">Java</a>&nbsp;</span>
     </div>
     <div class="post-item post-summary markdown-body">
-        记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&lt;People&gt; list = new ArrayList&lt;&gt;(); list.add(new People(&#34;nautilis&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;nautilis&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;bevan&#34;, 25, &#34;zheng&#34;)); list.add(new People(&#34;ning&#34;, 24, &#34;li&#34;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&lt;String, People&gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&gt;
+        记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&lt;People&gt; list = new ArrayList&lt;&gt;(); list.add(new People(&quot;nautilis&quot;, 25, &quot;zheng&quot;)); list.add(new People(&quot;nautilis&quot;, 25, &quot;zheng&quot;)); list.add(new People(&quot;bevan&quot;, 25, &quot;zheng&quot;)); list.add(new People(&quot;ning&quot;, 24, &quot;li&quot;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&lt;String, People&gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&gt;
     </div>
 </div>
 

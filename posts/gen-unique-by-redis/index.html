@@ -122,174 +122,175 @@
 <li>多台机器ID保持唯一：id通过数字映射到35个数字字母组成(1-9,a-z, 0作为补位), 整个id分为两段，前段4位字符由当前时间跟服务的起始时间做差以及机器编号决定，后段5位字符则通过随机生成数字再通过Redis的bitmap排重。排重的key使用id的前段标识，redis bitmap可以最多可以标记2^32-1，后段位数为5共35^5=52521875个随机数,假如并发高到10000tps一个小时内也不会超过52521875了。</li>
 <li>单个进程中ID的存取：通过channel存储生成的id, 当channel满时休眠，channel被消费有剩余空间时补充id。</li>
 </ul>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+<pre><code class="language-go">package main
 
-<span style="color:#f92672">import</span> (
-	<span style="color:#e6db74">&#34;bytes&#34;</span>
-	<span style="color:#e6db74">&#34;log&#34;</span>
-	<span style="color:#e6db74">&#34;math/rand&#34;</span>
-    <span style="color:#e6db74">&#34;github.com/go-redis/redis/v8&#34;</span>
-	<span style="color:#e6db74">&#34;os&#34;</span>
-	<span style="color:#e6db74">&#34;strconv&#34;</span>
-	<span style="color:#e6db74">&#34;sync&#34;</span>
-	<span style="color:#e6db74">&#34;time&#34;</span>
+import (
+	&quot;bytes&quot;
+	&quot;log&quot;
+	&quot;math/rand&quot;
+    &quot;github.com/go-redis/redis/v8&quot;
+	&quot;os&quot;
+	&quot;strconv&quot;
+	&quot;sync&quot;
+	&quot;time&quot;
 )
 
-<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">redisClient</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">Client</span>
+var redisClient *redis.Client
 
-<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">IdGenerate</span> <span style="color:#66d9ef">struct</span> {
-	<span style="color:#a6e22e">base35code</span>  []<span style="color:#66d9ef">byte</span>
-	<span style="color:#a6e22e">startTime</span>   <span style="color:#66d9ef">int64</span>
-	<span style="color:#a6e22e">machineCode</span> <span style="color:#66d9ef">int</span> <span style="color:#75715e">//服务器编码(通过hostname后缀获取）
-</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">redisClient</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">Client</span>
-	<span style="color:#a6e22e">random</span>      <span style="color:#f92672">*</span><span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">Rand</span>
-	<span style="color:#a6e22e">idChannel</span>   <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">string</span> <span style="color:#75715e">//存储生成id的管道
-</span><span style="color:#75715e"></span>}
+type IdGenerate struct {
+	base35code  []byte
+	startTime   int64
+	machineCode int //服务器编码(通过hostname后缀获取）
+	redisClient *redis.Client
+	random      *rand.Rand
+	idChannel   chan string //存储生成id的管道
+}
 
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewIdGenerate</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span> {
-	<span style="color:#a6e22e">inst</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">IdGenerate</span>{
-		<span style="color:#a6e22e">startTime</span>: <span style="color:#ae81ff">1596782020</span>,
-		<span style="color:#a6e22e">random</span>:    <span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">rand</span>.<span style="color:#a6e22e">NewSource</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Unix</span>())),
-		<span style="color:#a6e22e">idChannel</span>: make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">string</span>, <span style="color:#ae81ff">10000</span>),
+func NewIdGenerate() *IdGenerate {
+	inst := &amp;IdGenerate{
+		startTime: 1596782020,
+		random:    rand.New(rand.NewSource(time.Now().Unix())),
+		idChannel: make(chan string, 10000),
 	}
-	<span style="color:#a6e22e">hostName</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Hostname</span>()
-	<span style="color:#a6e22e">machineId</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Atoi</span>(<span style="color:#a6e22e">hostName</span>[len(<span style="color:#a6e22e">hostName</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>:])
-	<span style="color:#a6e22e">inst</span>.<span style="color:#a6e22e">machineCode</span> = <span style="color:#a6e22e">machineId</span>
-	<span style="color:#a6e22e">base35Code</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;123456789qwertyuioplkjhgfdsazxcvbnm&#34;</span>
-	<span style="color:#a6e22e">inst</span>.<span style="color:#a6e22e">base35code</span> = []byte(<span style="color:#a6e22e">base35Code</span>)
-	<span style="color:#a6e22e">redisClient</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">redis</span>.<span style="color:#a6e22e">Options</span>{
-		<span style="color:#a6e22e">Addr</span>: <span style="color:#e6db74">&#34;127.0.0.1:6379&#34;</span>,
+	hostName, _ := os.Hostname()
+	machineId, _ := strconv.Atoi(hostName[len(hostName)-2:])
+	inst.machineCode = machineId
+	base35Code := &quot;123456789qwertyuioplkjhgfdsazxcvbnm&quot;
+	inst.base35code = []byte(base35Code)
+	redisClient := redis.NewClient(&amp;redis.Options{
+		Addr: &quot;127.0.0.1:6379&quot;,
 	})
-	<span style="color:#a6e22e">inst</span>.<span style="color:#a6e22e">redisClient</span> = <span style="color:#a6e22e">redisClient</span>
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">inst</span>
+	inst.redisClient = redisClient
+	return inst
 }
 
-<span style="color:#75715e">//将数字映射成字母数字组合字符串
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">getBase35Code</span>(<span style="color:#a6e22e">num</span> <span style="color:#66d9ef">int64</span>) <span style="color:#66d9ef">string</span> {
-	<span style="color:#a6e22e">codeLen</span> <span style="color:#f92672">:=</span> int64(len(<span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">base35code</span>))
-	<span style="color:#a6e22e">buf</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
-	<span style="color:#66d9ef">for</span> {
-		<span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">base35code</span>[<span style="color:#a6e22e">num</span><span style="color:#f92672">%</span><span style="color:#a6e22e">codeLen</span>]
-		<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">WriteByte</span>(<span style="color:#a6e22e">c</span>)
-		<span style="color:#a6e22e">num</span> = <span style="color:#a6e22e">num</span> <span style="color:#f92672">/</span> <span style="color:#a6e22e">codeLen</span>
-		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">num</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span> {
-			<span style="color:#66d9ef">break</span>
+//将数字映射成字母数字组合字符串
+func (this *IdGenerate) getBase35Code(num int64) string {
+	codeLen := int64(len(this.base35code))
+	buf := bytes.Buffer{}
+	for {
+		c := this.base35code[num%codeLen]
+		buf.WriteByte(c)
+		num = num / codeLen
+		if num &lt;= 0 {
+			break
 		}
 	}
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">String</span>()
+	return buf.String()
 }
 
-<span style="color:#75715e">//当前时间与服务起始时间做差来确定一个排重key
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">getDistinctKey</span>() <span style="color:#66d9ef">string</span> {
-	<span style="color:#a6e22e">key</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">getBase35Code</span>((<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Unix</span>()<span style="color:#f92672">-</span><span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">startTime</span>)<span style="color:#f92672">/</span><span style="color:#ae81ff">3500</span> <span style="color:#f92672">+</span> int64(<span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">machineCode</span>))
-	<span style="color:#a6e22e">pack</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
-	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">key</span>) &lt; <span style="color:#ae81ff">4</span> { <span style="color:#75715e">//不足四位通过0补齐
-</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> len(<span style="color:#a6e22e">key</span>); <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">4</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
-			<span style="color:#a6e22e">pack</span>.<span style="color:#a6e22e">WriteByte</span>(<span style="color:#e6db74">&#39;0&#39;</span>)
+//当前时间与服务起始时间做差来确定一个排重key
+func (this *IdGenerate) getDistinctKey() string {
+	key := this.getBase35Code((time.Now().Unix()-this.startTime)/3500 + int64(this.machineCode))
+	pack := bytes.Buffer{}
+	if len(key) &lt; 4 { //不足四位通过0补齐
+		for i := len(key); i &lt; 4; i++ {
+			pack.WriteByte('0')
 		}
 	}
-	<span style="color:#a6e22e">pack</span>.<span style="color:#a6e22e">WriteString</span>(<span style="color:#a6e22e">key</span>)
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">pack</span>.<span style="color:#a6e22e">String</span>()
+	pack.WriteString(key)
+	return pack.String()
 }
 
-<span style="color:#75715e">//通过bitmap过滤不断的尝试生成新id
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">genId</span>() <span style="color:#66d9ef">string</span> {
-	<span style="color:#a6e22e">distinctKey</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">getDistinctKey</span>()
-	<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">BitCount</span>(<span style="color:#a6e22e">distinctKey</span>, <span style="color:#66d9ef">nil</span>).<span style="color:#a6e22e">Result</span>()
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+//通过bitmap过滤不断的尝试生成新id
+func (this *IdGenerate) genId() string {
+	distinctKey := this.getDistinctKey()
+	c, err := this.redisClient.BitCount(distinctKey, nil).Result()
+	if err != nil {
+		log.Print(err.Error())
 	}
-	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> <span style="color:#a6e22e">c</span><span style="color:#f92672">%</span><span style="color:#ae81ff">100</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> { <span style="color:#75715e">//设置新key 2小时后过期，这里怕一次设置可能失败故没在bitmap 每标记100个就重新设置一次过期
-</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">Expire</span>(<span style="color:#a6e22e">distinctKey</span>, <span style="color:#ae81ff">2</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Hour</span>)
+	if c == 0 || c%100 == 0 { //设置新key 2小时后过期，这里怕一次设置可能失败故没在bitmap 每标记100个就重新设置一次过期
+		this.redisClient.Expire(distinctKey, 2*time.Hour)
 	}
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">id</span> <span style="color:#66d9ef">int</span>
-	<span style="color:#66d9ef">for</span> {
-		<span style="color:#a6e22e">id</span> = <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">random</span>.<span style="color:#a6e22e">Intn</span>(<span style="color:#ae81ff">35</span>) <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
-		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">4</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
-			<span style="color:#a6e22e">r</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">random</span>.<span style="color:#a6e22e">Intn</span>(<span style="color:#ae81ff">35</span>) <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
-			<span style="color:#a6e22e">id</span> = <span style="color:#a6e22e">id</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">r</span>
+	var id int
+	for {
+		id = this.random.Intn(35) + 1
+		for i := 0; i &lt; 4; i++ {
+			r := this.random.Intn(35) + 1
+			id = id * r
 		}
-		<span style="color:#a6e22e">val</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">GetBit</span>(<span style="color:#a6e22e">distinctKey</span>, int64(<span style="color:#a6e22e">id</span>)).<span style="color:#a6e22e">Result</span>()
-		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;access redis error: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+		val, err := this.redisClient.GetBit(distinctKey, int64(id)).Result()
+		if err != nil {
+			log.Print(&quot;access redis error: &quot; + err.Error())
 		}
-		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">val</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
-			<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">redisClient</span>.<span style="color:#a6e22e">SetBit</span>(<span style="color:#a6e22e">distinctKey</span>, int64(<span style="color:#a6e22e">id</span>), <span style="color:#ae81ff">1</span>).<span style="color:#a6e22e">Result</span>()
-			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
-				<span style="color:#66d9ef">continue</span>
+		if val == 0 {
+			_, err := this.redisClient.SetBit(distinctKey, int64(id), 1).Result()
+			if err != nil {
+				log.Println(err.Error())
+				continue
 			}
-			<span style="color:#66d9ef">break</span>
+			break
 		}
 	}
-	<span style="color:#a6e22e">randomPart</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">getBase35Code</span>(int64(<span style="color:#a6e22e">id</span>))
-	<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
-	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">WriteString</span>(<span style="color:#a6e22e">distinctKey</span>)
-	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">WriteString</span>(<span style="color:#a6e22e">randomPart</span>)
-	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">randomPart</span>) &lt; <span style="color:#ae81ff">5</span> {
-		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> len(<span style="color:#a6e22e">randomPart</span>); <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">5</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
-			<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">WriteByte</span>(<span style="color:#e6db74">&#39;0&#39;</span>)
+	randomPart := this.getBase35Code(int64(id))
+	b := bytes.Buffer{}
+	b.WriteString(distinctKey)
+	b.WriteString(randomPart)
+	if len(randomPart) &lt; 5 {
+		for i := len(randomPart); i &lt; 5; i++ {
+			b.WriteByte('0')
 		}
 	}
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">String</span>()
+	return b.String()
 }
 
-<span style="color:#75715e">//循环不断生成id的方法
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">provideId</span>() {
-	<span style="color:#a6e22e">useOld</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span>
-	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">id</span> <span style="color:#66d9ef">string</span>
-	<span style="color:#66d9ef">for</span> {
-		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">useOld</span> {
-			<span style="color:#a6e22e">id</span> = <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">genId</span>()
+//循环不断生成id的方法
+func (this *IdGenerate) provideId() {
+	useOld := false
+	var id string
+	for {
+		if !useOld {
+			id = this.genId()
 		}
-		<span style="color:#66d9ef">select</span> {
-		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">idChannel</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">id</span>:
-			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;add id:&#34;</span>, <span style="color:#a6e22e">id</span>)
-			<span style="color:#a6e22e">useOld</span> = <span style="color:#66d9ef">false</span>
-		<span style="color:#66d9ef">default</span>:
-			<span style="color:#a6e22e">useOld</span> = <span style="color:#66d9ef">true</span>
-			<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+		select {
+		case this.idChannel &lt;- id:
+			log.Println(&quot;add id:&quot;, id)
+			useOld = false
+		default:
+			useOld = true
+			time.Sleep(2 * time.Second)
 		}
 	}
 }
 
-<span style="color:#75715e">//获取id
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">this</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">IdGenerate</span>) <span style="color:#a6e22e">ConsumeId</span>(<span style="color:#a6e22e">size</span> <span style="color:#66d9ef">int</span>) (<span style="color:#a6e22e">res</span> []<span style="color:#66d9ef">string</span>) {
-	<span style="color:#75715e">//总的超时时间设置为100ms
-</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">eachTimeOut</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>(<span style="color:#ae81ff">100</span><span style="color:#f92672">/</span><span style="color:#a6e22e">size</span>) <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Millisecond</span>
-	<span style="color:#a6e22e">res</span> = make([]<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">size</span>)
-	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">size</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
-		<span style="color:#66d9ef">select</span> {
-		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">id</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">this</span>.<span style="color:#a6e22e">idChannel</span>:
-			<span style="color:#a6e22e">res</span> = append(<span style="color:#a6e22e">res</span>, <span style="color:#a6e22e">id</span>)
-		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">After</span>(<span style="color:#a6e22e">eachTimeOut</span>):
-			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;access id time&#34;</span>)
+//获取id
+func (this *IdGenerate) ConsumeId(size int) (res []string) {
+	//总的超时时间设置为100ms
+	eachTimeOut := time.Duration(100/size) * time.Millisecond
+	res = make([]string, size)
+	for i := 0; i &lt; size; i++ {
+		select {
+		case id := &lt;-this.idChannel:
+			res = append(res, id)
+		case &lt;-time.After(eachTimeOut):
+			log.Println(&quot;access id time&quot;)
 		}
 	}
-	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">res</span>
+	return res
 }
 
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
-	<span style="color:#a6e22e">generator</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewIdGenerate</span>()
-	<span style="color:#a6e22e">wg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">WaitGroup</span>{}
-	<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">2</span>)
-	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
-		<span style="color:#a6e22e">generator</span>.<span style="color:#a6e22e">provideId</span>()
-		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Done</span>()
+func main() {
+	generator := NewIdGenerate()
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		generator.provideId()
+		wg.Done()
 	}()
-	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">10</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
-		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
-			<span style="color:#66d9ef">for</span> {
-				<span style="color:#a6e22e">ids</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">generator</span>.<span style="color:#a6e22e">ConsumeId</span>(<span style="color:#ae81ff">3</span>)
-				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;consume ids:&#34;</span>, <span style="color:#a6e22e">ids</span>)
-				<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#ae81ff">1</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+	for i := 0; i &lt; 10; i++ {
+		go func() {
+			for {
+				ids := generator.ConsumeId(3)
+				log.Println(&quot;consume ids:&quot;, ids)
+				time.Sleep(1 * time.Second)
 			}
 		}()
 	}
 
-	<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Wait</span>()
+	wg.Wait()
 }
-</code></pre></div>
+</code></pre>
+
     </div>
 </article>
 

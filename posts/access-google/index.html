@@ -124,48 +124,50 @@
 <li>开启动态端口转发后，通过<a href="%22https://chrome.google.com/webstore/detail/proxy-switchyomega/padekgcemlokbadohgkifijomclgjgif?hl=zh-CN&amp;utm_source=chrome-ntp-launcher%22">SwitchyOmega</a>等代理插件将浏览器数据转发到本地端口8000即可。</li>
 <li>定时重启脚本。不知道是不是超时配置问题，ssh会时不时断线，需要重启，所以就写了个python脚本加到crontab。</li>
 </ul>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Python" data-lang="Python"><span style="color:#f92672">import</span> subprocess
-<span style="color:#f92672">import</span> os 
-<span style="color:#f92672">import</span> re
+<pre><code class="language-Python">import subprocess
+import os 
+import re
 
-<span style="color:#e6db74">&#39;&#39;&#39;
-</span><span style="color:#e6db74">通过 ps -ef | grep ssh\ -p\ 22\ -f\ -N | grep -v grep | awk &#39;{print $2}&#39;
-</span><span style="color:#e6db74">找到启动的进程，执行 kill， 重启ssh转发命令。
-</span><span style="color:#e6db74">&#39;&#39;&#39;</span>
-<span style="color:#66d9ef">try</span>:
-    ps <span style="color:#f92672">=</span> subprocess<span style="color:#f92672">.</span>Popen((<span style="color:#e6db74">&#39;ps&#39;</span>, <span style="color:#e6db74">&#39;-ef&#39;</span>), stdout<span style="color:#f92672">=</span>subprocess<span style="color:#f92672">.</span>PIPE)
-    grep <span style="color:#f92672">=</span> subprocess<span style="color:#f92672">.</span>Popen((<span style="color:#e6db74">&#39;grep&#39;</span>, <span style="color:#e6db74">&#39;ssh\ -p\ 22\ -f\ -N&#39;</span> ), stdin<span style="color:#f92672">=</span>ps<span style="color:#f92672">.</span>stdout, stdout<span style="color:#f92672">=</span>subprocess<span style="color:#f92672">.</span>PIPE)
-    awk <span style="color:#f92672">=</span> subprocess<span style="color:#f92672">.</span>check_output((<span style="color:#e6db74">&#39;awk&#39;</span>, <span style="color:#e6db74">&#39;{print $2}&#39;</span>), stdin<span style="color:#f92672">=</span>grep<span style="color:#f92672">.</span>stdout)
-    ps<span style="color:#f92672">.</span>wait()
-    grep<span style="color:#f92672">.</span>wait()
-    <span style="color:#66d9ef">print</span>(awk)
-<span style="color:#66d9ef">except</span>:
-    command <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&#34;</span>
-    os<span style="color:#f92672">.</span>system(command)
+'''
+通过 ps -ef | grep ssh\ -p\ 22\ -f\ -N | grep -v grep | awk '{print $2}'
+找到启动的进程，执行 kill， 重启ssh转发命令。
+'''
+try:
+    ps = subprocess.Popen(('ps', '-ef'), stdout=subprocess.PIPE)
+    grep = subprocess.Popen(('grep', 'ssh\ -p\ 22\ -f\ -N' ), stdin=ps.stdout, stdout=subprocess.PIPE)
+    awk = subprocess.check_output(('awk', '{print $2}'), stdin=grep.stdout)
+    ps.wait()
+    grep.wait()
+    print(awk)
+except:
+    command = &quot;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&quot;
+    os.system(command)
     exit()
 
-pids <span style="color:#f92672">=</span> [p <span style="color:#66d9ef">for</span> p <span style="color:#f92672">in</span> awk<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#39;</span>) <span style="color:#66d9ef">if</span> re<span style="color:#f92672">.</span>match(<span style="color:#e6db74">&#34;^\d&#34;</span>, p)]
-<span style="color:#66d9ef">for</span> pid <span style="color:#f92672">in</span> pids:
-    <span style="color:#66d9ef">print</span>(<span style="color:#e6db74">&#34;to kill...</span><span style="color:#e6db74">%s</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">%</span> (pid))
-    subprocess<span style="color:#f92672">.</span>check_output([<span style="color:#e6db74">&#34;kill&#34;</span>, pid])
+pids = [p for p in awk.split('\n') if re.match(&quot;^\d&quot;, p)]
+for pid in pids:
+    print(&quot;to kill...%s&quot; % (pid))
+    subprocess.check_output([&quot;kill&quot;, pid])
 
-command <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&#34;</span>
-os<span style="color:#f92672">.</span>system(command)
-</code></pre></div><ul>
+command = &quot;ssh -p 22 -f -N -D 0.0.0.0:8000 username@remote_ip&quot;
+os.system(command)
+</code></pre>
+<ul>
 <li>用shell 更少代码</li>
 </ul>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#75715e">#!/usr/bin
-</span><span style="color:#75715e"></span>
-pids<span style="color:#f92672">=(</span><span style="color:#e6db74">`</span>ps -ef | grep <span style="color:#e6db74">&#39;ssh -p 22 -f -N&#39;</span>  | grep -v <span style="color:#e6db74">&#39;grep&#39;</span> | awk <span style="color:#e6db74">&#39;{print $2}&#39;</span><span style="color:#e6db74">`</span><span style="color:#f92672">)</span>
+<pre><code class="language-shell">#!/usr/bin
+
+pids=(`ps -ef | grep 'ssh -p 22 -f -N'  | grep -v 'grep' | awk '{print $2}'`)
 echo $pids
-<span style="color:#66d9ef">for</span> p in $pids
-<span style="color:#66d9ef">do</span>
+for p in $pids
+do
   kill -9 $p	
-<span style="color:#66d9ef">done</span>
+done
 
-ssh -p <span style="color:#ae81ff">22</span> -f -N -D 0.0.0.0:1090 root@remote_ip
+ssh -p 22 -f -N -D 0.0.0.0:1090 root@remote_ip
 
-</code></pre></div>
+</code></pre>
+
     </div>
 </article>
 
