@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>sort on nautilis&#39; blog</title>
-    <link>https://nautilis.github.io/tags/sort/</link>
+    <link>/tags/sort/</link>
     <description>Recent content in sort on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 07 Jul 2018 18:00:34 +0800</lastBuildDate>
     
-	<atom:link href="https://nautilis.github.io/tags/sort/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/sort/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>排序算法</title>
-      <link>https://nautilis.github.io/posts/sort-algorithm/</link>
+      <link>/posts/sort-algorithm/</link>
       <pubDate>Sat, 07 Jul 2018 18:00:34 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/sort-algorithm/</guid>
+      <guid>/posts/sort-algorithm/</guid>
       <description>归并排序 归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素</description>
     </item>
     

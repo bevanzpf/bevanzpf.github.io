@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Java on nautilis&#39; blog</title>
-    <link>https://nautilis.github.io/tags/java/</link>
+    <link>/tags/java/</link>
     <description>Recent content in Java on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 18 May 2019 10:06:40 +0800</lastBuildDate>
     
-	<atom:link href="https://nautilis.github.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/java/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Java8语法糖</title>
-      <link>https://nautilis.github.io/posts/java8/</link>
+      <link>/posts/java8/</link>
       <pubDate>Sat, 18 May 2019 10:06:40 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/java8/</guid>
+      <guid>/posts/java8/</guid>
       <description>记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&amp;lt;People&amp;gt; list = new ArrayList&amp;lt;&amp;gt;(); list.add(new People(&amp;quot;nautilis&amp;quot;, 25, &amp;quot;zheng&amp;quot;)); list.add(new People(&amp;quot;nautilis&amp;quot;, 25, &amp;quot;zheng&amp;quot;)); list.add(new People(&amp;quot;bevan&amp;quot;, 25, &amp;quot;zheng&amp;quot;)); list.add(new People(&amp;quot;ning&amp;quot;, 24, &amp;quot;li&amp;quot;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&amp;lt;String, People&amp;gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&amp;gt;</description>
     </item>
     

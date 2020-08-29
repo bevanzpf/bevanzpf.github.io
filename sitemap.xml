@@ -3,86 +3,86 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://nautilis.github.io/posts/learn-discovery-source-code/</loc>
+    <loc>/posts/learn-discovery-source-code/</loc>
     <lastmod>2020-08-29T11:14:10+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/tags/go/</loc>
+    <loc>/tags/go/</loc>
     <lastmod>2020-08-29T11:14:10+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/tags/microservices/</loc>
+    <loc>/tags/microservices/</loc>
     <lastmod>2020-08-29T11:14:10+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/</loc>
+    <loc>/</loc>
     <lastmod>2020-08-29T11:14:10+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/</loc>
+    <loc>/posts/</loc>
     <lastmod>2020-08-29T11:14:10+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/tags/redis/</loc>
+    <loc>/tags/redis/</loc>
     <lastmod>2020-08-15T11:25:06+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/gen-unique-by-redis/</loc>
+    <loc>/posts/gen-unique-by-redis/</loc>
     <lastmod>2020-08-15T11:25:06+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/record-server-optimization/</loc>
+    <loc>/posts/record-server-optimization/</loc>
     <lastmod>2020-07-31T18:26:20+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/tags/ssh/</loc>
+    <loc>/tags/ssh/</loc>
     <lastmod>2019-06-10T18:06:20+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/access-google/</loc>
+    <loc>/posts/access-google/</loc>
     <lastmod>2019-06-10T18:06:20+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/tags/java/</loc>
+    <loc>/tags/java/</loc>
     <lastmod>2019-05-18T10:06:40+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/java8/</loc>
+    <loc>/posts/java8/</loc>
     <lastmod>2019-05-18T10:06:40+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/ssh-note/</loc>
+    <loc>/posts/ssh-note/</loc>
     <lastmod>2019-03-21T17:55:45+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/tags/sort/</loc>
+    <loc>/tags/sort/</loc>
     <lastmod>2018-07-07T18:00:34+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/posts/sort-algorithm/</loc>
+    <loc>/posts/sort-algorithm/</loc>
     <lastmod>2018-07-07T18:00:34+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/archives/</loc>
+    <loc>/archives/</loc>
   </url>
   
   <url>
-    <loc>https://nautilis.github.io/search/</loc>
+    <loc>/search/</loc>
   </url>
   
 </urlset>

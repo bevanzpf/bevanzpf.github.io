@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Microservices on nautilis&#39; blog</title>
-    <link>https://nautilis.github.io/tags/microservices/</link>
+    <link>/tags/microservices/</link>
     <description>Recent content in Microservices on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 29 Aug 2020 11:14:10 +0800</lastBuildDate>
     
-	<atom:link href="https://nautilis.github.io/tags/microservices/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/microservices/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>bilibili/discovery 源码解析</title>
-      <link>https://nautilis.github.io/posts/learn-discovery-source-code/</link>
+      <link>/posts/learn-discovery-source-code/</link>
       <pubDate>Sat, 29 Aug 2020 11:14:10 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/learn-discovery-source-code/</guid>
+      <guid>/posts/learn-discovery-source-code/</guid>
       <description>前阵子看了关于B站微服务化的视频分享，对其中讲到的服务发现相关的知识印象深刻，后面发现这个组件是开源的, 于是随手clone下来学习一下。discovery 是B站主站使用的服务注册/发现组件, 其设计参考</description>
     </item>
     

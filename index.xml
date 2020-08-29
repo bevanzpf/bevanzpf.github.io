@@ -2,75 +2,75 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>nautilis&#39; blog</title>
-    <link>https://nautilis.github.io/</link>
+    <link>/</link>
     <description>Recent content on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 29 Aug 2020 11:14:10 +0800</lastBuildDate>
     
-	<atom:link href="https://nautilis.github.io/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>bilibili/discovery 源码解析</title>
-      <link>https://nautilis.github.io/posts/learn-discovery-source-code/</link>
+      <link>/posts/learn-discovery-source-code/</link>
       <pubDate>Sat, 29 Aug 2020 11:14:10 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/learn-discovery-source-code/</guid>
+      <guid>/posts/learn-discovery-source-code/</guid>
       <description>前阵子看了关于B站微服务化的视频分享，对其中讲到的服务发现相关的知识印象深刻，后面发现这个组件是开源的, 于是随手clone下来学习一下。discovery 是B站主站使用的服务注册/发现组件, 其设计参考</description>
     </item>
     
     <item>
       <title>徒手撸一个分布式id生成器</title>
-      <link>https://nautilis.github.io/posts/gen-unique-by-redis/</link>
+      <link>/posts/gen-unique-by-redis/</link>
       <pubDate>Sat, 15 Aug 2020 11:25:06 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/gen-unique-by-redis/</guid>
+      <guid>/posts/gen-unique-by-redis/</guid>
       <description>在大型业务系统中我们常常需要对数据库进行分库分表处理，此时数据的唯一标识无法再通过依赖数据库唯一键的方式实现，因此我们需要一个id服务负责分配唯一id。分布式id生成器在如今已经是再寻常不过的需求，业</description>
     </item>
     
     <item>
       <title>记一次服务端性能优化</title>
-      <link>https://nautilis.github.io/posts/record-server-optimization/</link>
+      <link>/posts/record-server-optimization/</link>
       <pubDate>Fri, 31 Jul 2020 18:26:20 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/record-server-optimization/</guid>
+      <guid>/posts/record-server-optimization/</guid>
       <description>作为一个服务端开发人员，相信大家都有半夜被突然的告警惊醒的经历，也会有面临发生问题手忙脚乱无从下手的时期，这篇文章回顾了近期我排查一个线上性能问题的过程。 背景 我主要负责的一个线上服务在夜深人静的某天调</description>
     </item>
     
     <item>
       <title>科学上网之ssh</title>
-      <link>https://nautilis.github.io/posts/access-google/</link>
+      <link>/posts/access-google/</link>
       <pubDate>Mon, 10 Jun 2019 18:06:20 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/access-google/</guid>
+      <guid>/posts/access-google/</guid>
       <description>SSH是什么 ssh 是一种加密网络协议，通过建立安全隧道来进行客户端/服务器通信，通常用于远程登录，但实际上任何网络服务都可以通过ssh进行安全传输。 利用SSH 进行科学上网 如果你恰巧有一台海外服务器，可以利</description>
     </item>
     
     <item>
       <title>Java8语法糖</title>
-      <link>https://nautilis.github.io/posts/java8/</link>
+      <link>/posts/java8/</link>
       <pubDate>Sat, 18 May 2019 10:06:40 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/java8/</guid>
+      <guid>/posts/java8/</guid>
       <description>记录Java8的一些语法🍬 List to Map @Data @AllArgsConstructor @ToString class People { private String name; private int age; private String lastName; } @Test public void testStream() { List&amp;lt;People&amp;gt; list = new ArrayList&amp;lt;&amp;gt;(); list.add(new People(&amp;quot;nautilis&amp;quot;, 25, &amp;quot;zheng&amp;quot;)); list.add(new People(&amp;quot;nautilis&amp;quot;, 25, &amp;quot;zheng&amp;quot;)); list.add(new People(&amp;quot;bevan&amp;quot;, 25, &amp;quot;zheng&amp;quot;)); list.add(new People(&amp;quot;ning&amp;quot;, 24, &amp;quot;li&amp;quot;)); //重复key只保留一个， 并用linkedHashMap保证顺序 Map&amp;lt;String, People&amp;gt; map = list.stream().sorted(Comparator.comparing(People::getAge).reversed()) .collect(Collectors.toMap(People::getName, Function.identity(), (oldv, newV) -&amp;gt;</description>
     </item>
     
     <item>
       <title>ssh 笔记</title>
-      <link>https://nautilis.github.io/posts/ssh-note/</link>
+      <link>/posts/ssh-note/</link>
       <pubDate>Thu, 21 Mar 2019 17:55:45 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/ssh-note/</guid>
+      <guid>/posts/ssh-note/</guid>
       <description>端口转发 http://www.dshowing.com/2017/08/14/SSH_portforward/ 本地启动ssh:ssh -p [serverport] -f -N -D 0.0.0.0:[socksport] username@remoteaddress chrome上用proxy switchysharp 或者 firefox 用FoxyProxy 配置一个socks5 IP:127.0.0.1 端口为所填的socksport。 ssh -o PubkeyAuthentication=no 120.24.161.131 不用ssh key ssh -f 后台运行 -N 不发送命令 -f</description>
     </item>
     
     <item>
       <title>排序算法</title>
-      <link>https://nautilis.github.io/posts/sort-algorithm/</link>
+      <link>/posts/sort-algorithm/</link>
       <pubDate>Sat, 07 Jul 2018 18:00:34 +0800</pubDate>
       
-      <guid>https://nautilis.github.io/posts/sort-algorithm/</guid>
+      <guid>/posts/sort-algorithm/</guid>
       <description>归并排序 归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素</description>
     </item>
     
