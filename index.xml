@@ -6,10 +6,19 @@
     <description>Recent content on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Aug 2020 11:25:06 +0800</lastBuildDate>
+    <lastBuildDate>Sat, 29 Aug 2020 11:14:10 +0800</lastBuildDate>
     
 	<atom:link href="https://nautilis.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>bilibili/discovery 源码解析</title>
+      <link>https://nautilis.github.io/posts/learn-discovery-source-code/</link>
+      <pubDate>Sat, 29 Aug 2020 11:14:10 +0800</pubDate>
+      
+      <guid>https://nautilis.github.io/posts/learn-discovery-source-code/</guid>
+      <description>前阵子看了关于B站微服务化的视频分享，对其中讲到的服务发现相关的知识印象深刻，后面发现这个组件是开源的, 于是随手clone下来学习一下。discovery 是B站主站使用的服务注册/发现组件, 其设计参考</description>
+    </item>
     
     <item>
       <title>徒手撸一个分布式id生成器</title>

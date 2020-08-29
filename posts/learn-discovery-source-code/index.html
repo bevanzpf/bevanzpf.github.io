@@ -15,25 +15,25 @@
 <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
 
 
-<title>排序算法 - nautilis&#39; blog</title>
+<title>bilibili/discovery 源码解析 - nautilis&#39; blog</title>
 
 
 <meta name="author" content="nautilis" />
 
 
 
-<meta name="keywords" content="sort" />
+<meta name="keywords" content="Go, Microservices" />
 
-<meta property="og:title" content="排序算法" />
-<meta property="og:description" content="归并排序 归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素" />
+<meta property="og:title" content="bilibili/discovery 源码解析" />
+<meta property="og:description" content="前阵子看了关于B站微服务化的视频分享，对其中讲到的服务发现相关的知识印象深刻，后面发现这个组件是开源的, 于是随手clone下来学习一下。discovery 是B站主站使用的服务注册/发现组件, 其设计参考" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://nautilis.github.io/posts/sort-algorithm/" />
-<meta property="article:published_time" content="2018-07-07T18:00:34+08:00" />
-<meta property="article:modified_time" content="2018-07-07T18:00:34+08:00" />
+<meta property="og:url" content="https://nautilis.github.io/posts/learn-discovery-source-code/" />
+<meta property="article:published_time" content="2020-08-29T11:14:10+08:00" />
+<meta property="article:modified_time" content="2020-08-29T11:14:10+08:00" />
 
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="排序算法"/>
-<meta name="twitter:description" content="归并排序 归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素"/>
+<meta name="twitter:title" content="bilibili/discovery 源码解析"/>
+<meta name="twitter:description" content="前阵子看了关于B站微服务化的视频分享，对其中讲到的服务发现相关的知识印象深刻，后面发现这个组件是开源的, 于是随手clone下来学习一下。discovery 是B站主站使用的服务注册/发现组件, 其设计参考"/>
 
 
 
@@ -108,130 +108,19 @@
 <article>
     
     <h2 class="post-item post-title">
-        <a href="https://nautilis.github.io/posts/sort-algorithm/">排序算法</a>
+        <a href="https://nautilis.github.io/posts/learn-discovery-source-code/">bilibili/discovery 源码解析</a>
     </h2>
     <div class="post-item post-meta">
-        <span><ion-icon name="today"></ion-icon>&nbsp;2018-07-07</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/sort">sort</a>&nbsp;</span>
+        <span><ion-icon name="today"></ion-icon>&nbsp;2020-08-29</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/go">Go</a>&nbsp;<a href="/tags/microservices">Microservices</a>&nbsp;</span>
     </div>
     
     
     <div class="post-content markdown-body">
-        <h2 id="归并排序">归并排序</h2>
-<ul>
-<li>归并排序是建立在归并操作的基础之上的。如果两个数组都是有序数组，只需迭代两个数组，不断比较两个数组元素，将较小的排到前面即可。归并排序首先通过递归对数组进行对等分割，直到分割的部分只有一个元素(相邻两个数组必定有序）进行合并操作。</li>
-</ul>
-<pre><code class="language-c">#include&lt;stdio.h&gt;
-
-void show(int arr[], int n){
-	int i;
-	for( i=0; i&lt;n; i++)
-		printf(&quot;%d, &quot;, arr[i]);
-	printf(&quot;\n&quot;);
-}	
-
-//合并算法
-void merge(int array[], int left, int mid, int right){
-	int aux[right+1]; //临时数组
-	//从中间断开两个标志分别
-	int i = left; 
-	int j = mid + 1; 
-	int k;
-	
-	for( k=left; k&lt;=right; k++ ) //复制数组
-		aux[k] = array[k];
-
-	for( k=left; k&lt;=right; k++ ){
-		if(i &gt; mid) //左边指针已超出
-			array[k] = aux[j++];
-		else if(j &gt; right) //右边指针超出
-			array[k] = aux[i++];
-		else if(aux[j] &lt; aux[i]) //都没有超出就比较两者大小
-			array[k] = aux[j++];
-		else
-			array[k] = aux[i++];
-	}
-}
-
-void sort(int array[], int left, int right){
-    if(left &gt;= right)
-	    return;	
-	int mid = left + (right - left) / 2;
-	sort(array, left, mid);
-	sort(array, mid+1, right);
-	merge(array, left, mid, right);
-}
-
-int main()
-{
-	int arr_test[] = { 8, 2, 19, 4, 5, 11, 23, 44, 12, 31 };
-	int size = sizeof(arr_test)/sizeof(arr_test[0]);
-	printf(&quot;%s \n&quot;, &quot;before sort:&quot;);
-	show(arr_test, size);
-    sort(arr_test, 0, size-1);	
-	printf(&quot;%s \n&quot;, &quot;after sorted:&quot;);
-	show(arr_test, size);
-	return 0;
-}
-
-</code></pre>
-<h2 id="快速排序">快速排序</h2>
-<ul>
-<li>快速排序是建立在划分基础上的，划分过程选取一个数组成员作为比较将数组划分成大于这比较目标和小于这个比较目标的两部分,对数组不断的递归划分最终数组即是有序的。</li>
-</ul>
-<pre><code class="language-c">#include&lt;stdio.h&gt;
-void show(int arr[], int size)
-{
-	int i;
-	for(i=0;i&lt;size;i++)
-		printf(&quot;%d &quot;, arr[i]);
-	printf(&quot;\n&quot;);
-}
-void exch(int arr[], int i, int j)
-{
-	int temp = arr[i];
-	arr[i] = arr[j];
-	arr[j] = temp;
-}
-int partition(int arr[], int left, int right) 
-{
-	int v = arr[left];
-	int i = left; //向前扫的指针
-	int j = right + 1; //向后扫指针
-	while(1){
-		while(arr[++i] &lt; v)
-		   if(i == right)//前扫指针已到低 
-			    break;
-		while(arr[--j] &gt; v)
-			if(j == left) //后扫指针已到低
-			    break;
-		if(i&gt;=j)// 两个指针相遇
-		    break;	
-		exch(arr, i, j); //while 循环停下来交换元素
-	}
-	exch(arr, left, j);
-	return j;
-}
-void sort(int arr[], int left, int right)
-{
-	if(left &gt;= right)
-	    return;
-	int j = partition(arr, left, right);
-	sort(arr, left, j);
-	sort(arr, j+1, right);
-}
-void quickSort(int arr[], int size)
-{
-	sort(arr, 0, size -1);
-}
-int main()
-{
-	int arr[] = {23, 11, 24, 5, 67, 2, 4};
-    int size = sizeof(arr) / sizeof(arr[0]);
-	show(arr, size);
-	quickSort(arr, size);
-	show(arr, size);
-}
-</code></pre>
+        <p>前阵子看了关于B站微服务化的视频分享，对其中讲到的服务发现相关的知识印象深刻，后面发现这个组件是开源的, 于是随手clone下来学习一下。discovery 是B站主站使用的服务注册/发现组件, 其设计参考服务注册发现领域的标杆Netflix Eureka并扩展了一些社区期望的功能，是一套纯粹的AP系统。Discovery实现了AP类型的服务注册发现，据说可用性极高，下面就来观摩一下源码，一探究竟。</p>
+<h3 id="概况">概况</h3>
+<p><img class="img-zoomable" src="/img/discovery-uml.svg" alt="image" />
+</p>
+<p>&hellip; TO BE CONTINUE &hellip;</p>
 
     </div>
 </article>
