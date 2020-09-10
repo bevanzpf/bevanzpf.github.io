@@ -120,7 +120,252 @@
 <h3 id="概况">概况</h3>
 <p><img class="img-zoomable" src="/img/discovery-uml.svg" alt="image" />
 </p>
-<p>&hellip; TO BE CONTINUE &hellip;</p>
+<p>整个名字服务是一个依赖于discovery的HTTP服务器，对外提供了服务注册，服务信息拉取，反注册，心跳等方法。discovery关联了一个register的结构，register包括了几个部分的数据，注册到discovery的实例Apps，调度相关配置scheduler，服务健康检查与自我保护用到的相关指标数据Guard，当前长轮询查询连接的信息hosts，以及discovery集群的节点数据Nodes。</p>
+<h3 id="启动过程">启动过程</h3>
+<pre><code class="language-go">func main() {
+	flag.Parse()
+	if err := conf.Init(); err != nil {
+		log.Error(&quot;conf.Init() error(%v)&quot;, err)
+		panic(err)
+	}
+	log.Init(conf.Conf.Log)
+	dis, cancel := discovery.New(conf.Conf)
+	http.Init(conf.Conf, dis)
+	// init signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	for {
+		s := &lt;-c
+		log.Info(&quot;discovery get a signal %s&quot;, s.String())
+		switch s {
+		case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
+			cancel()
+			time.Sleep(time.Second)
+			log.Info(&quot;discovery quit !!!&quot;)
+			return
+		case syscall.SIGHUP:
+		default:
+			return
+		}
+	}
+}
+</code></pre>
+<p>从入口函数开始，首先用paladin这个bilibili自研的配置加载器解析配置，然后创建discovery实例，之后根据discovery实例创建一个HTTP服务对外提供服务，最后就是常见的监听系统信号在服务推出的时候做一些自我反注册的扫尾工作。我们具体关注下discovery实例的初始化过程。</p>
+<h3 id="discovery实例初始化">discovery实例初始化</h3>
+<pre><code class="language-go">func New(c *conf.Config) (d *Discovery, cancel context.CancelFunc) {
+	d = &amp;Discovery{
+		protected: c.EnableProtect,
+		c:         c,
+		client:    http.NewClient(c.HTTPClient),
+		registry:  registry.NewRegistry(c),
+	}
+	d.nodes.Store(registry.NewNodes(c)) //存储 discovery节点信息
+	d.syncUp() //拉取其他节点上的所有注册信息, 注册到当前节点 广播
+	cancel = d.regSelf() // 本节点信息注册以及心跳, cancel被调用后会去掉注册
+	go d.nodesproc() // 不断更新节点信息
+	go d.exitProtect() // 启动60s后退出保护模式
+	return
+}
+</code></pre>
+<ul>
+<li>首先创建了一个http客户端，这个主要是后续用来与其他节点通讯</li>
+<li>创建Registry</li>
+<li>从配置加载其他节点信息</li>
+<li>同步其他节点上注册的app的信息</li>
+<li>监听节点变更信息</li>
+<li>自我注册</li>
+<li>最后在60s后（确保discovery服务以及启动并且稳定运行）推出保护模式</li>
+</ul>
+<h4 id="创建registry">创建Registry</h4>
+<pre><code class="language-go">// NewRegistry new register.
+func NewRegistry(conf *conf.Config) (r *Registry) {
+	r = &amp;Registry{
+		appm:  make(map[string]*model.Apps),
+		conns: make(map[string]*hosts),
+		gd:    new(Guard),
+	}
+	r.scheduler = newScheduler(r)
+	r.scheduler.Load()
+	go r.scheduler.Reload()
+	go r.proc()
+	return
+}
+</code></pre>
+<ul>
+<li>appm用于存储注册上来的服务信息，appid-env =&gt; Apps, Apps是根据zone分组的 zone =&gt; App, App 存了一个根据hostname 分组的instances字典。（appid-env =&gt; zone =&gt;  hostname =&gt; instance）</li>
+<li>conns存储当前连接到这个节点的请求数据，conns是根据env跟appis分组的hosts字典（env.appid =&gt; hosts），hosts是根据hostname分组的conn字典。每个conn存储了请求的参数信息，以及一个channel，当注册实例信息发生变时通过通过这个channel对长轮询请求发送信号返回最新注册实例数据。</li>
+<li>scheduler是服务调度相关的配置，应该是设置每个服务的权重信息之类的，没细看。</li>
+<li>gd是一些服务心跳统计相关的数据，在下面的proc()方法中会每隔一分钟就统计更新一次前一分钟收到的心跳数，并且开启分批逐次剔除一些不可用的服务（非保护模式下90s没有心跳的服务），值得注意的是不管符合剔除条件的服务数据有多少，每次最多只能随机剔除服务总数的25%的不可用服务。</li>
+</ul>
+<pre><code class="language-go">func (r *Registry) evict() {
+	protect := r.gd.ok()
+	// We collect first all expired items, to evict them in random order. For large eviction sets,
+	// if we do not that, we might wipe out whole apps before self preservation kicks in. By randomizing it,
+	// the impact should be evenly distributed across all applications.
+	var eis []*model.Instance
+	var registrySize int
+	// all projects
+	ass := r.allapp()
+	for _, as := range ass {
+		for _, a := range as.App(&quot;&quot;) {
+			registrySize += a.Len()
+			is := a.Instances()
+			for _, i := range is {
+				delta := time.Now().UnixNano() - i.RenewTimestamp
+				if (!protect &amp;&amp; delta &gt; _evictThreshold) || delta &gt; _evictCeiling {
+					eis = append(eis, i)
+				}
+			}
+		}
+	}
+	// To compensate for GC pauses or drifting local time, we need to use current registry size as a base for
+	// triggering self-preservation. Without that we would wipe out full registry.
+	eCnt := len(eis)
+	registrySizeThreshold := int(float64(registrySize) * _percentThreshold)
+	evictionLimit := registrySize - registrySizeThreshold
+	if eCnt &gt; evictionLimit {
+		eCnt = evictionLimit
+	}
+	if eCnt == 0 {
+		return
+	}
+	for i := 0; i &lt; eCnt; i++ {
+		// Pick a random item (Knuth shuffle algorithm)
+		next := i + rand.Intn(len(eis)-i)
+		eis[i], eis[next] = eis[next], eis[i]
+		ei := eis[i]
+		r.cancel(ei.Zone, ei.Env, ei.AppID, ei.Hostname, time.Now().UnixNano())
+	}
+}
+</code></pre>
+<p>每隔15分钟更新一次期望心跳数，期望心跳数为注册到当前节点的实例总数*2 * 0.82，当每分钟接收到的心跳总数小于这个期望值的时候服务进入保护模式不进行随机剔除不可用节点的操作。</p>
+<h4 id="加载其他节点信息">加载其他节点信息</h4>
+<p>discovery支持集群部署，通过配置加载其他节点的信息以及其他数据中心的节点的信息，用于后续于其他节点通讯， Nodes最终通过atom.Value存起来</p>
+<pre><code class="language-go">// NewNodes new nodes and return.
+func NewNodes(c *conf.Config) *Nodes {
+	nodes := make([]*Node, 0, len(c.Nodes))
+	for _, addr := range c.Nodes { // 当前数据中心的节点信息
+		n := newNode(c, addr)
+		n.zone = c.Env.Zone
+		n.pRegisterURL = fmt.Sprintf(&quot;http://%s%s&quot;, c.HTTPServer.Addr, _registerURL) // 注册的http路径
+		nodes = append(nodes, n)
+	}
+	zones := make(map[string][]*Node)
+	for name, addrs := range c.Zones { // 其他数据中心的节点信息
+		var znodes []*Node
+		for _, addr := range addrs {
+			n := newNode(c, addr)
+			n.otherZone = true
+			n.zone = name
+			n.pRegisterURL = fmt.Sprintf(&quot;http://%s%s&quot;, c.HTTPServer.Addr, _registerURL)
+			znodes = append(znodes, n)
+		}
+		zones[name] = znodes
+	}
+	return &amp;Nodes{
+		nodes:    nodes,
+		zones:    zones,
+		selfAddr: c.HTTPServer.Addr, // 当前节点地址
+	}
+</code></pre>
+<h4 id="syncup同步其他节点的注册实例">syncUp同步其他节点的注册实例</h4>
+<p>便利其他节点，逐个全量拉取注册在这些节点上的服务，然后将这些服务的注册信息注册到当前节点上，也就是存储到registry的appm结构中，同时对关注这个appid的长轮询进行通知（这个注册&ndash;长轮询拉取的交互过程后续在做具体解析）</p>
+<h4 id="regself自注册">regSelf自注册</h4>
+<p>将本节点作为实例服务注册到discovery集群，注册到本节点 同时注册到所有其他集群中的节点。</p>
+<pre><code class="language-go">func (d *Discovery) Register(c context.Context, ins *model.Instance, latestTimestamp int64, replication bool, fromzone bool) {
+	_ = d.registry.Register(ins, latestTimestamp)
+	if !replication { //下面的方法对所有nodes都注册本节点
+		_ = d.nodes.Load().(*registry.Nodes).Replicate(c, model.Register, ins, fromzone)
+	}
+}
+</code></pre>
+<p>注册完后没30s对集群中的所有节点发送心跳，检测到取消信号时进行反注册</p>
+<pre><code class="language-go">	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case &lt;-ticker.C:
+				arg := &amp;model.ArgRenew{
+					AppID:    ins.AppID,
+					Zone:     d.c.Env.Zone,
+					Env:      d.c.Env.DeployEnv,
+					Hostname: d.c.Env.Host,
+				}
+				if _, err := d.Renew(ctx, arg); err != nil &amp;&amp; err == ecode.NothingFound {
+					d.Register(ctx, ins, now, false, false)
+				}
+			case &lt;-ctx.Done():
+				arg := &amp;model.ArgCancel{
+					AppID:    model.AppID,
+					Zone:     d.c.Env.Zone,
+					Env:      d.c.Env.DeployEnv,
+					Hostname: d.c.Env.Host,
+				}
+				if err := d.Cancel(context.Background(), arg); err != nil {
+					log.Error(&quot;d.Cancel(%+v) error(%v)&quot;, arg, err)
+				}
+				return
+			}
+		}
+	}()
+
+</code></pre>
+<h4 id="nodesproc监听节点变化">nodesproc监听节点变化</h4>
+<p>如上面的流程，集群中新增某个节点这个节点就会将自己注册到这个集群中去，所以节点启动完成后除了配置文件中的节点，集群中还可能动态新增了节点，nodesproc就是监听节点变化的方法通过polls监听appid=infra.discovery的服务变更，每次检测到变更则更新Nodes这个atom.Value</p>
+<pre><code class="language-go">func (d *Discovery) nodesproc() {
+	var (
+		lastTs int64
+	)
+	for {
+		arg := &amp;model.ArgPolls{
+			AppID:           []string{model.AppID},
+			Env:             d.c.Env.DeployEnv,
+			Hostname:        d.c.Env.Host,
+			LatestTimestamp: []int64{lastTs},
+		}
+		ch, _, _, err := d.registry.Polls(arg)
+		if err != nil &amp;&amp; err != ecode.NotModified {
+			log.Error(&quot;d.registry(%v) error(%v)&quot;, arg, err)
+			time.Sleep(time.Second)
+			continue
+		}
+		apps := &lt;-ch
+		ins, ok := apps[model.AppID]
+		if !ok || ins == nil {
+			return
+		}
+		var (
+			nodes []string
+			zones = make(map[string][]string)
+		)
+		for _, ins := range ins.Instances {
+			for _, in := range ins {
+				for _, addr := range in.Addrs {
+					u, err := url.Parse(addr)
+					if err == nil &amp;&amp; u.Scheme == &quot;http&quot; {
+						if in.Zone == d.c.Env.Zone {
+							nodes = append(nodes, u.Host)
+						} else {
+							zones[in.Zone] = append(zones[in.Zone], u.Host)
+						}
+					}
+				}
+			}
+		}
+		lastTs = ins.LatestTimestamp
+		c := new(conf.Config)
+		*c = *d.c
+		c.Nodes = nodes
+		c.Zones = zones
+		ns := registry.NewNodes(c)
+		ns.UP()
+		d.nodes.Store(ns)
+		log.Info(&quot;discovery changed nodes:%v zones:%v&quot;, nodes, zones)
+	}
+}
+
+</code></pre>
 
     </div>
 </article>
