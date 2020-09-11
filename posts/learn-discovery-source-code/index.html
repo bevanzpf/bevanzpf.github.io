@@ -150,7 +150,7 @@
 	}
 }
 </code></pre>
-<p>从入口函数开始，首先用paladin这个bilibili自研的配置加载器解析配置，然后创建discovery实例，之后根据discovery实例创建一个HTTP服务对外提供服务，最后就是常见的监听系统信号在服务推出的时候做一些自我反注册的扫尾工作。我们具体关注下discovery实例的初始化过程。</p>
+<p>从入口函数开始，首先用paladin这个bilibili自研的配置加载器解析配置，然后创建discovery实例，之后根据discovery实例创建一个HTTP服务对外提供服务，最后就是常见的监听系统信号在服务退出的时候做一些自我反注册的扫尾工作。我们具体关注下discovery实例的初始化过程。</p>
 <h3 id="discovery实例初始化">discovery实例初始化</h3>
 <pre><code class="language-go">func New(c *conf.Config) (d *Discovery, cancel context.CancelFunc) {
 	d = &amp;Discovery{
@@ -174,7 +174,7 @@
 <li>同步其他节点上注册的app的信息</li>
 <li>监听节点变更信息</li>
 <li>自我注册</li>
-<li>最后在60s后（确保discovery服务以及启动并且稳定运行）推出保护模式</li>
+<li>最后在60s后（确保discovery服务以及启动并且稳定运行）退出保护模式</li>
 </ul>
 <h4 id="创建registry">创建Registry</h4>
 <pre><code class="language-go">// NewRegistry new register.
@@ -193,9 +193,9 @@ func NewRegistry(conf *conf.Config) (r *Registry) {
 </code></pre>
 <ul>
 <li>appm用于存储注册上来的服务信息，appid-env =&gt; Apps, Apps是根据zone分组的 zone =&gt; App, App 存了一个根据hostname 分组的instances字典。（appid-env =&gt; zone =&gt;  hostname =&gt; instance）</li>
-<li>conns存储当前连接到这个节点的请求数据，conns是根据env跟appis分组的hosts字典（env.appid =&gt; hosts），hosts是根据hostname分组的conn字典。每个conn存储了请求的参数信息，以及一个channel，当注册实例信息发生变时通过通过这个channel对长轮询请求发送信号返回最新注册实例数据。</li>
+<li>conns存储当前连接到这个节点的请求数据，conns是根据env跟appids分组的hosts字典（env.appid =&gt; hosts），hosts是根据hostname分组的conn字典。每个conn存储了请求的参数信息，以及一个channel，当注册实例信息发生变时通过通过这个channel对长轮询请求发送信号返回最新注册实例数据。</li>
 <li>scheduler是服务调度相关的配置，应该是设置每个服务的权重信息之类的，没细看。</li>
-<li>gd是一些服务心跳统计相关的数据，在下面的proc()方法中会每隔一分钟就统计更新一次前一分钟收到的心跳数，并且开启分批逐次剔除一些不可用的服务（非保护模式下90s没有心跳的服务），值得注意的是不管符合剔除条件的服务数据有多少，每次最多只能随机剔除服务总数的25%的不可用服务。</li>
+<li>gd存储的是一些服务心跳统计相关的数据，在下面的proc()方法中会每隔一分钟就统计更新一次前一分钟收到的心跳数，并且开启分批逐次剔除一些不可用的服务（非保护模式下90s没有心跳的服务），值得注意的是不管符合剔除条件的服务数据有多少，每次最多只能随机剔除服务总数的25%的不可用服务。</li>
 </ul>
 <pre><code class="language-go">func (r *Registry) evict() {
 	protect := r.gd.ok()
@@ -364,7 +364,159 @@ func NewNodes(c *conf.Config) *Nodes {
 		log.Info(&quot;discovery changed nodes:%v zones:%v&quot;, nodes, zones)
 	}
 }
+</code></pre>
+<h3 id="注册">注册</h3>
+<p>每个需要注册的服务通过调discovery的/register接口将自身注册上来，注册参数如下。</p>
+<pre><code class="language-go">type ArgRegister struct {
+	Region          string   `form:&quot;region&quot;`
+	Zone            string   `form:&quot;zone&quot; validate:&quot;required&quot;`
+	Env             string   `form:&quot;env&quot; validate:&quot;required&quot;`
+	AppID           string   `form:&quot;appid&quot; validate:&quot;required&quot;`
+	Hostname        string   `form:&quot;hostname&quot; validate:&quot;required&quot;`
+	Status          uint32   `form:&quot;status&quot; validate:&quot;required&quot;`
+	Addrs           []string `form:&quot;addrs&quot; validate:&quot;gt=0&quot;`
+	Version         string   `form:&quot;version&quot;`
+	Metadata        string   `form:&quot;metadata&quot;`
+	Replication     bool     `form:&quot;replication&quot;` // 是否属于discovery节点间复制的请求
+	LatestTimestamp int64    `form:&quot;latest_timestamp&quot;`
+	DirtyTimestamp  int64    `form:&quot;dirty_timestamp&quot;`
+	FromZone        bool     `form:&quot;from_zone&quot;`
+}
+</code></pre>
+<p>解析完这些参数组装成一个instance实例最后存储到registry#appm，同时向discovery集群的其他节点注册这个instance</p>
+<pre><code class="language-go">// Register a new instance.
+func (d *Discovery) Register(c context.Context, ins *model.Instance, latestTimestamp int64, replication bool, fromzone bool) {
+	_ = d.registry.Register(ins, latestTimestamp)
+	if !replication {
+        // Replicate 会同步集群的其他节点 
+		_ = d.nodes.Load().(*registry.Nodes).Replicate(c, model.Register, ins, fromzone)
+	}
+}
+</code></pre>
+<p>每当有新实例加入进来，会更新Registry的心跳期望 <code>r.gd.incrExp()</code> , 同时对正在进行长轮询订阅这个实例的连接进行广播。</p>
+<pre><code class="language-go">// Register a new instance.
+func (r *Registry) Register(ins *model.Instance, latestTime int64) (err error) {
+	a := r.newApp(ins)
+	i, ok := a.NewInstance(ins, latestTime)
+	if ok {
+		r.gd.incrExp() // 增加心跳期望值
+	}
+	// NOTE: make sure free poll before update appid latest timestamp.
+	r.broadcast(i.Env, i.AppID) // 对长轮询进行广播返回结果
+	return
+}
+</code></pre>
+<p>广播就是Fetch这个appid的所有实例信息出来，根据每个长轮询的条件进行过滤，最后通过channel发送过滤出来的结果集，长轮询那边接收到channel信号即返回结果。</p>
+<pre><code class="language-go">// broadcast on poll by chan.
+// NOTE: make sure free poll before update appid latest timestamp.
+func (r *Registry) broadcast(env, appid string) {
+	key := pollKey(env, appid)
+	r.cLock.Lock()
+	conns, ok := r.conns[key]
+	if !ok {
+		r.cLock.Unlock()
+		return
+	}
+	delete(r.conns, key)
+	r.cLock.Unlock()
+	conns.hclock.RLock()
+	for _, conn := range conns.hosts {
+		ii, err := r.Fetch(conn.arg.Zone, env, appid, 0, model.InstanceStatusUP) // TODO(felix): latesttime!=0 increase
+		if err != nil {
+			// may be not found ,just continue until next poll return err.
+			log.Error(&quot;get appid:%s env:%s zone:%s err:%v&quot;, appid, env, conn.arg.Zone, err)
+			continue
+		}
+		for i := 0; i &lt; conn.count; i++ {
+			select {
+			case conn.ch &lt;- map[string]*model.InstanceInfo{appid: ii}: // NOTE: if chan is full, means no poller.
+				log.Info(&quot;broadcast to(%s) success(%d)&quot;, conn.arg.Hostname, i+1)
+			case &lt;-time.After(time.Millisecond * 500):
+				log.Info(&quot;broadcast to(%s) failed(%d) maybe chan full&quot;, conn.arg.Hostname, i+1)
+			}
+		}
+	}
+	conns.hclock.RUnlock()
+} 
+</code></pre>
+<h3 id="拉取">拉取</h3>
+<p>拉取通过fetch过滤取argPolls中指定的app实例，Fetch方法通过对比appm中存储的实例的latestTimestamp, 如果latestTimestamp &lt; 存储的实例的lastTimestamp 说明注册中的实例变更还没有被拉取到，直接返回这个实例的信息。如果latestTimestamp &gt;= 存储实例的lastTimestamp, 说明之前拉取到的已经是最新的实例注册信息，这个时候回阻塞等待channel信号。</p>
+<pre><code class="language-go">// Polls hangs request and then write instances when that has changes, or return NotModified.
+func (r *Registry) Polls(arg *model.ArgPolls) (ch chan map[string]*model.InstanceInfo, new bool, miss []string, err error) {
+	var (
+		ins = make(map[string]*model.InstanceInfo, len(arg.AppID))
+	)
+	if len(arg.AppID) != len(arg.LatestTimestamp) {
+		arg.LatestTimestamp = make([]int64, len(arg.AppID))
+	}
+	for i := range arg.AppID {
+		in, err := r.Fetch(arg.Zone, arg.Env, arg.AppID[i], arg.LatestTimestamp[i], model.InstanceStatusUP)
+		if err == ecode.NothingFound {
+			miss = append(miss, arg.AppID[i])
+			log.Error(&quot;Polls zone(%s) env(%s) appid(%s) error(%v)&quot;, arg.Zone, arg.Env, arg.AppID[i], err)
+			continue
+		}
+		if err == nil {
+			ins[arg.AppID[i]] = in
+			new = true
+		}
+	}
+	if new {
+		ch = make(chan map[string]*model.InstanceInfo, 1)
+		ch &lt;- ins
+		return
+	}
+	for i := range arg.AppID {
+		k := pollKey(arg.Env, arg.AppID[i])
+		r.cLock.Lock()
+		if _, ok := r.conns[k]; !ok {
+			r.conns[k] = &amp;hosts{hosts: make(map[string]*conn, 1)}
+		}
+		hosts := r.conns[k]
+		r.cLock.Unlock()
 
+		hosts.hclock.Lock()
+		connection, ok := hosts.hosts[arg.Hostname]
+		if !ok {
+			if ch == nil {
+				ch = make(chan map[string]*model.InstanceInfo, 5) // NOTE: there maybe have more than one connection on the same hostname!!!
+			}
+			connection = newConn(ch, arg.LatestTimestamp[i], arg)
+			log.Info(&quot;Polls from(%s) new connection(%d)&quot;, arg.Hostname, connection.count)
+		} else {
+			connection.count++ // NOTE: there maybe have more than one connection on the same hostname!!!
+			if ch == nil {
+				ch = connection.ch
+			}
+			log.Info(&quot;Polls from(%s) reuse connection(%d)&quot;, arg.Hostname, connection.count)
+		}
+		hosts.hosts[arg.Hostname] = connection
+		hosts.hclock.Unlock()
+	}
+	return
+} 
+</code></pre>
+<h3 id="心跳">心跳</h3>
+<p>每个注册到discovery的服务需要每隔30s就向discovery发送一次心跳，discovery更新app的renew时间戳，同时更新收到当前分钟收到的心跳数 atomic.AddInt64(&amp;g.facInMin, 1) 。同时每个节点接收到的心跳也会复制给其他节点。</p>
+<pre><code class="language-go">// Renew marks the given instance of the given app name as renewed, and also marks whether it originated from replication.
+func (d *Discovery) Renew(c context.Context, arg *model.ArgRenew) (i *model.Instance, err error) {
+	i, ok := d.registry.Renew(arg)
+	if !ok {
+		err = ecode.NothingFound
+		log.Error(&quot;renew appid(%s) hostname(%s) zone(%s) env(%s) error&quot;, arg.AppID, arg.Hostname, arg.Zone, arg.Env)
+		return
+	}
+	if !arg.Replication {
+		_ = d.nodes.Load().(*registry.Nodes).Replicate(c, model.Renew, i, arg.Zone != d.c.Env.Zone)
+		return
+	}
+	if arg.DirtyTimestamp &gt; i.DirtyTimestamp {
+		err = ecode.NothingFound
+	} else if arg.DirtyTimestamp &lt; i.DirtyTimestamp {
+		err = ecode.Conflict
+	}
+	return
+}
 </code></pre>
 
     </div>
