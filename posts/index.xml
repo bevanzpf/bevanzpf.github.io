@@ -6,10 +6,19 @@
     <description>Recent content in Posts on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 29 Aug 2020 11:14:10 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 13 Nov 2020 20:21:00 +0800</lastBuildDate>
     
 	<atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>go generate 实战☞数据表实体生成器</title>
+      <link>/posts/golang-generate-entity/</link>
+      <pubDate>Fri, 13 Nov 2020 20:21:00 +0800</pubDate>
+      
+      <guid>/posts/golang-generate-entity/</guid>
+      <description>go generate 是 go 1.4版本新增的一个特性，用于在编译前通过命令自动生成代码，例如官方提供的stringer（golang.org/x/tools/cmd/stringer）。该注释只在.go源文件中生效，并且</description>
+    </item>
     
     <item>
       <title>bilibili/discovery 源码解析</title>
