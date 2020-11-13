@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/tags/go/</loc>
+    <lastmod>2020-11-13T20:21:00+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/posts/golang-generate-entity/</loc>
     <lastmod>2020-11-13T20:21:00+08:00</lastmod>
   </url>
@@ -19,11 +24,6 @@
   
   <url>
     <loc>/posts/learn-discovery-source-code/</loc>
-    <lastmod>2020-08-29T11:14:10+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/go/</loc>
     <lastmod>2020-08-29T11:14:10+08:00</lastmod>
   </url>
   
