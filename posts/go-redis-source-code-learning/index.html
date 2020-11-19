@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<meta name="HandheldFriendly" content="True" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+<meta name="generator" content="Hugo 0.74.3" />
+
+
+<link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/amzrk2/cdn-stcapi@1/favicons/favicon.ico" />
+
+
+<title>go-redis/redis 源码学习 - nautilis&#39; blog</title>
+
+
+<meta name="author" content="nautilis" />
+
+
+
+<meta name="keywords" content="Go, redis" />
+
+<meta property="og:title" content="go-redis/redis 源码学习" />
+<meta property="og:description" content="项目上大量使用Redis做缓存，前阵子还因为go-redis这个客户端的一些默认配置踩了些坑，所以决定抽出时间读读它的源码，好好了解一下一些关键功能（例如：连接池，redis命令）的实现。 主要结构图 整" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/posts/go-redis-source-code-learning/" />
+<meta property="article:published_time" content="2020-11-19T14:49:54+08:00" />
+<meta property="article:modified_time" content="2020-11-19T14:49:54+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="go-redis/redis 源码学习"/>
+<meta name="twitter:description" content="项目上大量使用Redis做缓存，前阵子还因为go-redis这个客户端的一些默认配置踩了些坑，所以决定抽出时间读读它的源码，好好了解一下一些关键功能（例如：连接池，redis命令）的实现。 主要结构图 整"/>
+
+
+
+<style>
+    @media (prefers-color-scheme: dark) {
+        body[data-theme='auto'] img {
+            filter: brightness(60%);
+        }
+    }
+
+    body[data-theme='dark'] img {
+        filter: brightness(60%);
+    }
+</style>
+
+
+<link rel="stylesheet" href="/assets/css/fuji.min.css" />
+
+
+<script async type="module" src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.esm.js"></script>
+<script async nomodule src="https://cdn.jsdelivr.net/npm/ionicons@5.0.1/dist/ionicons/ionicons.js"></script>
+
+
+
+
+</head>
+
+<body data-theme="auto">
+    <script data-cfasync="false">
+    
+    var fujiThemeData = localStorage.getItem('fuji_data-theme');
+    
+    if (!fujiThemeData) {
+        localStorage.setItem('fuji_data-theme', 'auto');
+    } else {
+        
+        if (fujiThemeData !== 'auto') {
+            document.body.setAttribute('data-theme', fujiThemeData === 'dark' ? 'dark' : 'light');
+        }
+    }
+</script>
+<script data-cfasync="false">
+    
+    function browserDetection(ua) {
+        if (ua.indexOf('MSIE ') > 0 || ua.indexOf('Trident/') > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    var ua = window.navigator.userAgent;
+    if (browserDetection(ua)) {
+        window.location.href('\/ie\/');
+    }
+</script>
+    <header>
+    <div class="container-lg clearfix">
+        <div class="col-12 header">
+            <a class="title-main" href="">nautilis&#39; blog</a>
+            
+            <span class="title-sub">f s f k</span>
+            
+        </div>
+    </div>
+</header>
+
+    <main>
+        <div class="container-lg clearfix">
+            
+            <div class="col-12 col-md-9 float-left content">
+                
+<article>
+    
+    <h2 class="post-item post-title">
+        <a href="/posts/go-redis-source-code-learning/">go-redis/redis 源码学习</a>
+    </h2>
+    <div class="post-item post-meta">
+        <span><ion-icon name="today"></ion-icon>&nbsp;2020-11-19</span><span><ion-icon name="pricetags"></ion-icon>&nbsp;<a href="/tags/go">Go</a>&nbsp;<a href="/tags/redis">redis</a>&nbsp;</span>
+    </div>
+    
+    
+    <div class="post-content markdown-body">
+        <p>项目上大量使用Redis做缓存，前阵子还因为go-redis这个客户端的一些默认配置踩了些坑，所以决定抽出时间读读它的源码，好好了解一下一些关键功能（例如：连接池，redis命令）的实现。</p>
+<h2 id="主要结构图">主要结构图</h2>
+<p><img class="img-zoomable" src="/img/go-redis-class-uml.svg" alt="image" />
+</p>
+<p>整个redis客户端分为两个主要的部分，一个是cmdable实现的各种Redis命令操作，另一部分是connPool实现的连接池管理功能。</p>
+<h2 id="启动过程">启动过程</h2>
+<pre><code class="language-golang">func NewClient(opt *Options) *Client {
+	opt.init()
+
+	c := Client{
+		baseClient: newBaseClient(opt, newConnPool(opt)),
+		ctx:        context.Background(),
+	}
+	c.cmdable = c.Process
+
+	return &amp;c
+}
+</code></pre>
+<h3 id="初始化配置">初始化配置</h3>
+<p>首先初始化配置对象options，这个struct主要包含Redis连接方式，各种读写超时以及连接池的相关属性设置，在opt.init中对各个属性进行设置，如果设置项没有指定则填充默认值。</p>
+<pre><code class="language-golang">type Options struct {
+	// The network type, either tcp or unix.
+	// Default is tcp.
+	Network string
+	// host:port address.
+	Addr string
+
+	// Dialer creates new network connection and has priority over
+	// Network and Addr options.
+	Dialer func(ctx context.Context, network, addr string) (net.Conn, error)
+
+	// Hook that is called when new connection is established.
+	OnConnect func(ctx context.Context, cn *Conn) error
+
+	// Use the specified Username to authenticate the current connection
+	// with one of the connections defined in the ACL list when connecting
+	// to a Redis 6.0 instance, or greater, that is using the Redis ACL system.
+	Username string
+	// Optional password. Must match the password specified in the
+	// requirepass server configuration option (if connecting to a Redis 5.0 instance, or lower),
+	// or the User Password when connecting to a Redis 6.0 instance, or greater,
+	// that is using the Redis ACL system.
+	Password string
+
+	// Database to be selected after connecting to the server.
+	DB int
+
+	// Maximum number of retries before giving up.
+	// Default is to not retry failed commands.
+	MaxRetries int
+	// Minimum backoff between each retry.
+	// Default is 8 milliseconds; -1 disables backoff.
+	MinRetryBackoff time.Duration
+	// Maximum backoff between each retry.
+	// Default is 512 milliseconds; -1 disables backoff.
+	MaxRetryBackoff time.Duration
+
+	// Dial timeout for establishing new connections.
+	// Default is 5 seconds.
+	DialTimeout time.Duration
+	// Timeout for socket reads. If reached, commands will fail
+	// with a timeout instead of blocking. Use value -1 for no timeout and 0 for default.
+	// Default is 3 seconds.
+	ReadTimeout time.Duration
+	// Timeout for socket writes. If reached, commands will fail
+	// with a timeout instead of blocking.
+	// Default is ReadTimeout.
+	WriteTimeout time.Duration
+
+	// Maximum number of socket connections.
+	// Default is 10 connections per every CPU as reported by runtime.NumCPU.
+	PoolSize int
+	// Minimum number of idle connections which is useful when establishing
+	// new connection is slow.
+	MinIdleConns int
+	// Connection age at which client retires (closes) the connection.
+	// Default is to not close aged connections.
+	MaxConnAge time.Duration
+	// Amount of time client waits for connection if all connections
+	// are busy before returning an error.
+	// Default is ReadTimeout + 1 second.
+	PoolTimeout time.Duration
+	// Amount of time after which client closes idle connections.
+	// Should be less than server's timeout.
+	// Default is 5 minutes. -1 disables idle timeout check.
+	IdleTimeout time.Duration
+	// Frequency of idle checks made by idle connections reaper.
+	// Default is 1 minute. -1 disables idle connections reaper,
+	// but idle connections are still discarded by the client
+	// if IdleTimeout is set.
+	IdleCheckFrequency time.Duration
+
+	// Enables read only queries on slave nodes.
+	readOnly bool
+
+	// TLS Config to use. When set TLS will be negotiated.
+	TLSConfig *tls.Config
+
+	// Limiter interface used to implemented circuit breaker or rate limiter.
+	Limiter Limiter
+}
+
+func (opt *Options) init() {
+	if opt.Addr == &quot;&quot; {
+		opt.Addr = &quot;localhost:6379&quot;
+	}
+	if opt.Network == &quot;&quot; {
+		if strings.HasPrefix(opt.Addr, &quot;/&quot;) {
+			opt.Network = &quot;unix&quot;
+		} else {
+			opt.Network = &quot;tcp&quot;
+		}
+	}
+	if opt.DialTimeout == 0 {
+		opt.DialTimeout = 5 * time.Second
+	}
+	if opt.Dialer == nil {
+		opt.Dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			netDialer := &amp;net.Dialer{
+				Timeout:   opt.DialTimeout,
+				KeepAlive: 5 * time.Minute,
+			}
+			if opt.TLSConfig == nil {
+				return netDialer.DialContext(ctx, network, addr)
+			}
+			return tls.DialWithDialer(netDialer, network, addr, opt.TLSConfig)
+		}
+	}
+	if opt.PoolSize == 0 {
+		opt.PoolSize = 10 * runtime.NumCPU()
+	}
+	switch opt.ReadTimeout {
+	case -1:
+		opt.ReadTimeout = 0
+	case 0:
+		opt.ReadTimeout = 3 * time.Second
+	}
+	switch opt.WriteTimeout {
+	case -1:
+		opt.WriteTimeout = 0
+	case 0:
+		opt.WriteTimeout = opt.ReadTimeout
+	}
+	if opt.PoolTimeout == 0 {
+		opt.PoolTimeout = opt.ReadTimeout + time.Second
+	}
+	if opt.IdleTimeout == 0 {
+		opt.IdleTimeout = 5 * time.Minute
+	}
+	if opt.IdleCheckFrequency == 0 {
+		opt.IdleCheckFrequency = time.Minute
+	}
+
+	if opt.MaxRetries == -1 {
+		opt.MaxRetries = 0
+	}
+	switch opt.MinRetryBackoff {
+	case -1:
+		opt.MinRetryBackoff = 0
+	case 0:
+		opt.MinRetryBackoff = 8 * time.Millisecond
+	}
+	switch opt.MaxRetryBackoff {
+	case -1:
+		opt.MaxRetryBackoff = 0
+	case 0:
+		opt.MaxRetryBackoff = 512 * time.Millisecond
+	}
+}
+</code></pre>
+<h3 id="创建连接池">创建连接池</h3>
+<p>连接池的配置承接自client的options，初始化连接池大小的配置后根据连接池的大小创建对应个数的连接填充到conns以及idlconns，这里通过一个带缓冲的queue channel来控制缓冲池的状态，省去通过数值比较每次都要加锁的损耗。初始化完成后通过启一个goruntine按指定的频率定时检测空闲连接中久未使用（超过idleTimeout）和超过最大存活时间的（猜测是由于连接建立超过一定时间可能因为某种原因已经断开TCP连接而不可用）。</p>
+<pre><code class="language-golang">func NewConnPool(opt *Options) *ConnPool {
+	p := &amp;ConnPool{
+		opt: opt,
+
+		queue:     make(chan struct{}, opt.PoolSize),
+		conns:     make([]*Conn, 0, opt.PoolSize),
+		idleConns: make([]*Conn, 0, opt.PoolSize),
+		closedCh:  make(chan struct{}),
+	}
+
+	p.connsMu.Lock()
+	p.checkMinIdleConns()
+	p.connsMu.Unlock()
+
+	if opt.IdleTimeout &gt; 0 &amp;&amp; opt.IdleCheckFrequency &gt; 0 {
+		go p.reaper(opt.IdleCheckFrequency)
+	}
+
+	return p
+}
+</code></pre>
+<h3 id="指定执行命令的方法">指定执行命令的方法</h3>
+<p><code>c.cmdable = c.Process </code> 代码跟踪到最终这个cmdable是位于baseClient#_process，各种Redis被封装成一个cmder然后再这个方法中通过获取连接，最后写入socket的方式执行Redis命令。</p>
+<pre><code class="language-golang">func (c *baseClient) _process(ctx context.Context, cmd Cmder) error {
+	var lastErr error
+	for attempt := 0; attempt &lt;= c.opt.MaxRetries; attempt++ {
+		attempt := attempt
+
+		var retry bool
+		err := internal.WithSpan(ctx, &quot;process&quot;, func(ctx context.Context) error {
+			if attempt &gt; 0 {
+				if err := internal.Sleep(ctx, c.retryBackoff(attempt)); err != nil {
+					return err
+				}
+			}
+
+			retryTimeout := true
+			err := c.withConn(ctx, func(ctx context.Context, cn *pool.Conn) error {
+				err := cn.WithWriter(ctx, c.opt.WriteTimeout, func(wr *proto.Writer) error {
+					return writeCmd(wr, cmd)
+				})
+				if err != nil {
+					return err
+				}
+
+				err = cn.WithReader(ctx, c.cmdTimeout(cmd), cmd.readReply)
+				if err != nil {
+					retryTimeout = cmd.readTimeout() == nil
+					return err
+				}
+
+				return nil
+			})
+			if err == nil {
+				return nil
+			}
+			retry = shouldRetry(err, retryTimeout)
+			return err
+		})
+		if err == nil || !retry {
+			return err
+		}
+		lastErr = err
+	}
+	return lastErr
+}
+</code></pre>
+<h2 id="连接池的实现">连接池的实现</h2>
+<h3 id="如何获取连接">如何获取连接</h3>
+<p>获取连接时通过queue这个缓冲信号通道来判断连接池是否已经使用满，在p.waitTurn这个方法中首先尝试向queue发送信号，如何queue阻塞说明缓冲池已经用满，需要在一定的timeout时间内不断重试。这里的超时timers采用了池化，避免连接池持续满负荷时需要持续创建timer小对象导致不断GC。</p>
+<pre><code class="language-golang">var timers = sync.Pool{
+	New: func() interface{} {
+		t := time.NewTimer(time.Hour)
+		t.Stop()
+		return t
+	},
+}
+
+func (p *ConnPool) waitTurn(ctx context.Context) error {
+	select {
+	case &lt;-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	select {
+	case p.queue &lt;- struct{}{}:
+		return nil
+	default:
+	}
+
+	timer := timers.Get().(*time.Timer)
+	timer.Reset(p.opt.PoolTimeout)
+
+	select {
+	case &lt;-ctx.Done():
+		if !timer.Stop() {
+			&lt;-timer.C
+		}
+		timers.Put(timer)
+		return ctx.Err()
+	case p.queue &lt;- struct{}{}:
+		if !timer.Stop() {
+			&lt;-timer.C
+		}
+		timers.Put(timer)
+		return nil
+	case &lt;-timer.C:
+		timers.Put(timer)
+		atomic.AddUint32(&amp;p.stats.Timeouts, 1)
+		return ErrPoolTimeout
+	}
+}
+
+// Get returns existed connection from the pool or creates a new one.
+func (p *ConnPool) Get(ctx context.Context) (*Conn, error) {
+	if p.closed() {
+		return nil, ErrClosed
+	}
+
+	err := p.waitTurn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		p.connsMu.Lock()
+		cn := p.popIdle()
+		p.connsMu.Unlock()
+
+		if cn == nil {
+			break
+		}
+
+		if p.isStaleConn(cn) {
+			_ = p.CloseConn(cn)
+			continue
+		}
+
+		atomic.AddUint32(&amp;p.stats.Hits, 1)
+		return cn, nil
+	}
+
+	atomic.AddUint32(&amp;p.stats.Misses, 1)
+
+	newcn, err := p.newConn(ctx, true)
+	if err != nil {
+		p.freeTurn()
+		return nil, err
+	}
+
+	return newcn, nil
+}
+</code></pre>
+<h3 id="如何放回连接池">如何放回连接池</h3>
+<p>连接被使用完毕后调用pool.Put返回连接池，Put方法中首先检查连接是否还有没有被读取的数据，如果有则关闭连接放回BadConnError。判断是否为连接池中的连接，如果不是则直接关闭。最后将连接放回idleConns队列，从queue通道移除一个元素。</p>
+<pre><code class="language-golang">func (p *ConnPool) Put(cn *Conn) {
+	if cn.rd.Buffered() &gt; 0 {
+		internal.Logger.Printf(context.Background(), &quot;Conn has unread data&quot;)
+		p.Remove(cn, BadConnError{})
+		return
+	}
+
+	if !cn.pooled {
+		p.Remove(cn, nil)
+		return
+	}
+
+	p.connsMu.Lock()
+	p.idleConns = append(p.idleConns, cn)
+	p.idleConnsLen++
+	p.connsMu.Unlock()
+	p.freeTurn()
+}
+</code></pre>
+<h3 id="如何建立连接">如何建立连接</h3>
+<p>建立连接的过程其实就是调用options中连接Redis的网络方法，返回connection再封装成*Conn, 当连接创建失败的次数到达连接池的size时触发不断重连直到成功</p>
+<pre><code class="language-golang">func (p *ConnPool) newConn(ctx context.Context, pooled bool) (*Conn, error) {
+	cn, err := p.dialConn(ctx, pooled)
+	if err != nil {
+		return nil, err
+	}
+
+	p.connsMu.Lock()
+	p.conns = append(p.conns, cn)
+	if pooled {
+		// If pool is full remove the cn on next Put.
+		if p.poolSize &gt;= p.opt.PoolSize {
+			cn.pooled = false
+		} else {
+			p.poolSize++
+		}
+	}
+	p.connsMu.Unlock()
+	return cn, nil
+}
+func (p *ConnPool) dialConn(ctx context.Context, pooled bool) (*Conn, error) {
+	if p.closed() {
+		return nil, ErrClosed
+	}
+
+	if atomic.LoadUint32(&amp;p.dialErrorsNum) &gt;= uint32(p.opt.PoolSize) {
+		return nil, p.getLastDialError()
+	}
+
+	netConn, err := p.opt.Dialer(ctx)
+	if err != nil {
+		p.setLastDialError(err)
+		if atomic.AddUint32(&amp;p.dialErrorsNum, 1) == uint32(p.opt.PoolSize) {
+			go p.tryDial()
+		}
+		return nil, err
+	}
+
+	internal.NewConnectionsCounter.Add(ctx, 1)
+	cn := NewConn(netConn)
+	cn.pooled = pooled
+	return cn, nil
+}
+
+func (p *ConnPool) tryDial() {
+	for {
+		if p.closed() {
+			return
+		}
+
+		conn, err := p.opt.Dialer(context.Background())
+		if err != nil {
+			p.setLastDialError(err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		atomic.StoreUint32(&amp;p.dialErrorsNum, 0)
+		_ = conn.Close()
+		return
+	}
+}
+</code></pre>
+
+    </div>
+</article>
+
+
+
+
+            </div>
+            <aside class="col-12 col-md-3 float-left sidebar">
+    
+    <div class="sidebar-item sidebar-pages">
+        <h3>Pages</h3>
+        <ul>
+            
+            <li>
+                <a href="/">主页</a>
+            </li>
+            
+            <li>
+                <a href="/archives/">归档</a>
+            </li>
+            
+            <li>
+                <a href="/index.xml">RSS</a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    <div class="sidebar-item sidebar-tags">
+        <h3>Tags</h3>
+        <div>
+            
+            <span>
+                <a href="/tags/go/">Go</a>
+            </span>
+            
+            <span>
+                <a href="/tags/java/">Java</a>
+            </span>
+            
+            <span>
+                <a href="/tags/microservices/">Microservices</a>
+            </span>
+            
+            <span>
+                <a href="/tags/redis/">redis</a>
+            </span>
+            
+            <span>
+                <a href="/tags/sort/">sort</a>
+            </span>
+            
+            <span>
+                <a href="/tags/ssh/">ssh</a>
+            </span>
+            
+        </div>
+    </div>
+    
+    <div class="sidebar-item sidebar-links">
+        <h3>Links</h3>
+        <ul>
+            
+            <li>
+                <a href="https://github.com/nautilis" target="_blank"><span>GitHub</span></a>
+            </li>
+            
+        </ul>
+    </div>
+    
+    
+    
+    
+</aside>
+        </div>
+        <div class="btn">
+    <div class="btn-toggle-mode">
+        <ion-icon name="contrast"></ion-icon>
+    </div>
+    <div class="btn-scroll-top">
+        <ion-icon name="chevron-up"></ion-icon>
+    </div>
+</div>
+    </main>
+
+    <footer>
+    <div class="container-lg clearfix">
+        <div class="col-12 footer">
+            <span>&copy; 2020 <a href="">nautilis</a> |
+                Powered by <a href="https://github.com/amzrk2/hugo-theme-fuji/"
+                   target="_blank">Fuji-v2</a> & <a href="https://gohugo.io/"
+                   target="_blank">Hugo</a> </span>
+        </div>
+    </div>
+</footer>
+    
+    
+<script defer src="https://cdn.jsdelivr.net/combine/npm/medium-zoom@1.0.5,npm/lazysizes@5.2.2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/components/prism-core.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.20.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<script defer src="/assets/js/fuji.min.js"></script>
+
+</body>
+
+</html>

@@ -6,10 +6,19 @@
     <description>Recent content in Go on nautilis&#39; blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 13 Nov 2020 20:21:00 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 19 Nov 2020 14:49:54 +0800</lastBuildDate>
     
 	<atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>go-redis/redis 源码学习</title>
+      <link>/posts/go-redis-source-code-learning/</link>
+      <pubDate>Thu, 19 Nov 2020 14:49:54 +0800</pubDate>
+      
+      <guid>/posts/go-redis-source-code-learning/</guid>
+      <description>项目上大量使用Redis做缓存，前阵子还因为go-redis这个客户端的一些默认配置踩了些坑，所以决定抽出时间读读它的源码，好好了解一下一些关键功能（例如：连接池，redis命令）的实现。 主要结构图 整</description>
+    </item>
     
     <item>
       <title>go generate 实战☞数据表实体生成器</title>
